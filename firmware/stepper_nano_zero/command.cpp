@@ -126,16 +126,13 @@ unsigned int CommandParse(sCmdUart *ptrUart,sCommand *ptrCmds, char *str, char d
 	char *ptrArgv[MAX_ARGS];
 	unsigned int numArgs;
 	int emptyArg=0;
-
 	sCommand cmd_list;
 
-
+  //first we need find command and arguments
 	while (*str==0x20 || *str=='\n' || *str=='\r' || *str=='\t') str++;
-	//first we need find command and arguments
+	
 	ptr=strchr(str,delimitor); //find first char
-
 	//LOG("2parsing %s",str);
-
 
 	if (ptr==0)
 	{
@@ -242,7 +239,6 @@ unsigned int CommandParse(sCmdUart *ptrUart,sCommand *ptrCmds, char *str, char d
 	i=0;
 	memcpy(&cmd_list, &ptrCmds[i], sizeof(sCommand));
 
-
 	//LOG("command is %s %d",buff,numArgs);
 
 	while(cmd_list.function!=0)
@@ -251,8 +247,7 @@ unsigned int CommandParse(sCmdUart *ptrUart,sCommand *ptrCmds, char *str, char d
 		strcpy_P(str,cmd_list.name);
 		LOG("checkign '%s' to '%s'",buff,str);
 		LOG("comapre is %d",strcmp_P(buff,cmd_list.name));
-*/
-
+  */
 		//memcpy_P(&p, cmd_list.name, sizeof(PGM_P));
 #ifdef PGM_P //check and see if the PGM_P is defined for the AVR
 		if (strlen(buff)==strlen_P(cmd_list.name))
@@ -330,7 +325,6 @@ int CommandProcess(sCmdUart *ptrUart,sCommand *ptrCmds, char delimitor, char *cm
 		}
 	}
 
-
 	if (strstr(ptrUart->buffer,ANSI_UP)) //up arrow
 	{
 		uint8_t i;
@@ -354,8 +348,6 @@ int CommandProcess(sCmdUart *ptrUart,sCommand *ptrCmds, char delimitor, char *cm
 		ptrUart->data=ASCII_UP_ARROW;
 	}
 
-
 	ptrUart->lastChar=ptrUart->data;
 	return 0;
 }
-

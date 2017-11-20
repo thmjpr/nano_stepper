@@ -22,42 +22,41 @@
 #pragma GCC push_options
 #pragma GCC optimize ("-Ofast")
 
-eepromData_t PowerupEEPROM={0};
-
-
-volatile bool enableState=true;
-
-int32_t dataEnabled=0;
-
+eepromData_t PowerupEEPROM = {0};
+volatile bool enableState = true;
+int32_t dataEnabled = 0;
 StepperCtrl stepperCtrl;
 NZS_LCD Lcd;
 
 int menuCalibrate(int argc, char *argv[])
 {
-	stepperCtrl.calibrateEncoder();
+	stepperCtrl.calibrateEncoder(&Lcd);
 }
 
 int menuTestCal(int argc, char *argv[])
 {
 	Angle error;
-	int32_t x,y;
+	int32_t x, y;
 	char str[25];
-	error=stepperCtrl.maxCalibrationError();
+	error = stepperCtrl.maxCalibrationError();
 
-	x=(36000*(int32_t)error)/ANGLE_STEPS;
+	x = (36000*(int32_t)error)/ANGLE_STEPS;
 	LOG("Error %d %d", (int32_t)error, x);
-	y=x/100;
-	x=x-(y*100);
-	x=abs(x);
-	sprintf(str, "%d.%02d deg",y,x);
-	Lcd.lcdShow("Cal Error", str,"");
-	LOG("Calibration error %s",str);
+	y = x/100;
+	x = x-(y*100);
+	x = abs(x);
+	sprintf(str, "%d.%02d deg", y, x);
+#ifndef DISABLE_LCD
+	Lcd.lcdShow("Cal Error", str, "");
+#endif
+
+	LOG("Calibration error %s", str);
 #ifndef MECHADUINO_HARDWARE
-	while(digitalRead(PIN_SW3)==1)
+	while(digitalRead(PIN_SW3) == 1)
 	{
 		//wait for button press
 	}
-	while(digitalRead(PIN_SW3)==0)
+	while(digitalRead(PIN_SW3) == 0)
 	{
 		//wait for button release
 	}
@@ -70,15 +69,14 @@ static  options_t stepOptions[] {
 		{""},
 };
 
-//returns the index of the stepOptions when called
-// with no arguments.
+//returns the index of the stepOptions when called with no arguments.
 int motorSteps(int argc, char *argv[])
 {
 	if (argc==0)
 	{
 		int i;
-		i=NVM->motorParams.fullStepsPerRotation;
-		if (i==400)
+		i = NVM->motorParams.fullStepsPerRotation;
+		if (i == 400)
 		{
 			return 1;
 		}
@@ -90,16 +88,17 @@ int motorSteps(int argc, char *argv[])
 		MotorParams_t params;
 		memcpy((void *)&params, (void *)&NVM->motorParams, sizeof(params));
 		i=atol(argv[0]);
-		if (i!=params.fullStepsPerRotation)
+		if (i != params.fullStepsPerRotation)
 		{
-			params.fullStepsPerRotation=i;
+			params.fullStepsPerRotation = i;
 			nvmWriteMotorParms(params);
 		}
 	}
-
+ 
 	return 0;
 }
 
+//Available motor currents
 static  options_t currentOptions[] {
 		{"0"},
 		{"100"},
@@ -145,34 +144,33 @@ int motorCurrent(int argc, char *argv[])
 	{
 		int i;
 		LOG("called %s",argv[0]);
-		i=atol(argv[0]);
-		i=i*100;
+		i = atol(argv[0]);
+		i = i*100;
 		MotorParams_t params;
 		memcpy((void *)&params, (void *)&NVM->motorParams, sizeof(params));
 		if (i!=params.currentMa)
 		{
-			params.currentMa=i;
+			params.currentMa = i;
 			nvmWriteMotorParms(params);
 		}
 		return i/100;
 	}
 	int i;
-	i=NVM->motorParams.currentMa/100;
+	i = NVM->motorParams.currentMa/100;
 	LOG(" motorCurrent return %d",i);
 	return i;
-
 }
 
 int motorHoldCurrent(int argc, char *argv[])
 {
-	if (argc==1)
+	if (argc == 1)
 	{
 		int i;
-		i=atol(argv[0]);
-		i=i*100;
+		i = atol(argv[0]);
+		i = i*100;
 		MotorParams_t params;
 		memcpy((void *)&params, (void *)&NVM->motorParams, sizeof(params));
-		if (i!=params.currentHoldMa)
+		if (i != params.currentHoldMa)
 		{
 			params.currentHoldMa=i;
 			nvmWriteMotorParms(params);
@@ -181,7 +179,7 @@ int motorHoldCurrent(int argc, char *argv[])
 	}else
 	{
 		int i;
-		i=NVM->motorParams.currentHoldMa/100;
+		i = NVM->motorParams.currentHoldMa/100;
 		return i;
 	}
 }
@@ -199,27 +197,28 @@ static  options_t microstepOptions[] {
 		{""}
 };
 
+//argc = 1 to write new value to NVM
+//argc = 0 to return current setting?
 int microsteps(int argc, char *argv[])
 {
-	if (argc==1)
+	if (argc == 1)
 	{
 		int i,steps;
-		i=atol(argv[0]);
+		i = atol(argv[0]);
 		SystemParams_t params;
 		memcpy((void *)&params, (void *)&NVM->SystemParams, sizeof(params));
-		steps=0x01<<i;
-		if (steps!=params.microsteps)
+		steps = 0x01<<i;
+		if (steps != params.microsteps)
 		{
-			params.microsteps=steps;
+			params.microsteps = steps;
 			nvmWriteSystemParms(params);
 		}
 		return i;
 	}
 	int i,j;
-	i=NVM->SystemParams.microsteps;
+	i = NVM->SystemParams.microsteps;
 	for (j=0; j<9; j++)
 	{
-
 		if ((0x01<<j) == i)
 		{
 			return j;
@@ -236,8 +235,6 @@ static  options_t controlLoopOptions[] {
 		{"Vel PID"},
 		{""}
 };
-
-
 
 int controlLoop(int argc, char *argv[])
 {
@@ -256,9 +253,6 @@ int controlLoop(int argc, char *argv[])
 	}
 	return NVM->SystemParams.controllerMode;
 }
-
-
-
 
 #ifndef PIN_ENABLE
 static  options_t errorPinOptions[] {
@@ -330,9 +324,9 @@ int dirPin(int argc, char *argv[])
 		i=atol(argv[0]);
 		SystemParams_t params;
 		memcpy((void *)&params, (void *)&NVM->SystemParams, sizeof(params));
-		if (i!=params.dirPinRotation)
+		if (i != params.dirPinRotation)
 		{
-			params.dirPinRotation=(RotationDir_t)i;
+			params.dirPinRotation = (RotationDir_t)i;
 			nvmWriteSystemParms(params);
 		}
 		return i;
@@ -340,33 +334,28 @@ int dirPin(int argc, char *argv[])
 	return NVM->SystemParams.dirPinRotation;
 }
 
-
 static  menuItem_t MenuMain[] {
-		{"Calibrate", menuCalibrate,NULL},
-		{"Test Cal", menuTestCal,NULL},
+		{"Calibrate", menuCalibrate, NULL},
+		{"Test Cal", menuTestCal, NULL},
 		//		{"Mtr steps", motorSteps,stepOptions}, NOT GOOD for user to call this
-		{"Motor mA", motorCurrent,currentOptions},
-		{"Hold mA", motorHoldCurrent,currentOptions},
-		{"Microstep", microsteps,microstepOptions},
-		//		{"Ctlr Mode", controlLoop,controlLoopOptions}, //this may not be good for user to call
+		{"Motor mA", motorCurrent, currentOptions},
+		{"Hold mA", motorHoldCurrent, currentOptions},
+		{"Microstep", microsteps, microstepOptions},
+		{"Ctlr Mode", controlLoop, controlLoopOptions}, //this may not be good for user to call
 #ifndef PIN_ENABLE
-		{"Error Pin", errorPin,errorPinOptions},
+		{"Error Pin", errorPin, errorPinOptions},
 #else
-		{"EnablePin", enablePin,errorPinOptions},
+		{"EnablePin", enablePin, errorPinOptions},
 #endif
-		{"Dir Pin", dirPin,dirPinOptions},
-
-
+		{"Dir Pin", dirPin, dirPinOptions},
 		{ "", NULL}
 };
 
 static  menuItem_t MenuCal[] {
-		{"Calibrate", menuCalibrate,NULL},
-		//{"Test Cal", menuTestCal,NULL},
+		{"Calibrate", menuCalibrate, NULL},
+		//{"Test Cal", menuTestCal, NULL},
 		{ "", NULL}
 };
-
-
 
 //this function is called on the rising edge of a step from external device
 static void stepInput(void)
@@ -382,7 +371,6 @@ static void stepInput(void)
 	stepperCtrl.requestStep(dir,1);
 }
 
-
 //this function is called when error pin changes as enable signal
 static void enableInput(void)
 {
@@ -392,7 +380,7 @@ static void enableInput(void)
 		static int enable;
 		//read our enable pin
 		enable = digitalRead(PIN_ENABLE);
-		enableState=enable;
+		enableState = enable;
 		//stepperCtrl.enable(enable);
 	}
 	if (NVM->SystemParams.errorPinMode == ERROR_PIN_MODE_ACTIVE_LOW_ENABLE)
@@ -400,7 +388,7 @@ static void enableInput(void)
 		static int enable;
 		//read our enable pin
 		enable = !digitalRead(PIN_ENABLE);
-		enableState=enable;
+		enableState = enable;
 		//stepperCtrl.enable(enable);
 	}
 
@@ -418,16 +406,13 @@ static void enableInput(void)
 		static int enable;
 		//read our enable pin
 		enable = !digitalRead(PIN_ERROR);
-		enableState=enable;
+		enableState = enable;
 		//stepperCtrl.enable(enable);
 	}
 #endif
 }
 
-
-
-
-
+//
 void TC5_Handler()
 {
 	if (TC5->COUNT16.INTFLAG.bit.OVF == 1)
@@ -440,10 +425,10 @@ void TC5_Handler()
 		GPIO_OUTPUT(PIN_ERROR);
 		if (error)
 		{	//assume high is inactive and low is active on error pin
-			digitalWrite(PIN_ERROR,LOW);
+			digitalWrite(PIN_ERROR, LOW);
 		}else
 		{
-			digitalWrite(PIN_ERROR,HIGH);
+			digitalWrite(PIN_ERROR, HIGH);
 		}
 #else
 
@@ -452,10 +437,10 @@ void TC5_Handler()
 			GPIO_OUTPUT(PIN_ERROR);
 			if (error)
 			{	//assume high is inactive and low is active on error pin
-				digitalWrite(PIN_ERROR,LOW);
+				digitalWrite(PIN_ERROR, LOW);
 			}else
 			{
-				digitalWrite(PIN_ERROR,HIGH);
+				digitalWrite(PIN_ERROR, HIGH);
 			}
 		}
 #endif
@@ -467,7 +452,6 @@ void TC5_Handler()
 //check the NVM and set to defaults if there is any
 void validateAndInitNVMParams(void)
 {
-
 	if (false == NVM->sPID.parametersVaild)
 	{
 		nvmWrite_sPID(0.9,0.0001, 0.01);
@@ -486,21 +470,16 @@ void validateAndInitNVMParams(void)
 	if (false == NVM->SystemParams.parametersVaild)
 	{
 		SystemParams_t params;
-		params.microsteps=16;
-		params.controllerMode=CTRL_SIMPLE;
-		params.dirPinRotation=CW_ROTATION; //default to clockwise rotation when dir is high
-		params.errorLimit=(int32_t)ANGLE_FROM_DEGREES(1.8);
-		params.errorPinMode=ERROR_PIN_MODE_ENABLE;  //default to enable pin
+		params.microsteps = 16;
+		params.controllerMode = CTRL_SIMPLE;
+		params.dirPinRotation = CW_ROTATION; //default to clockwise rotation when dir is high
+		params.errorLimit = (int32_t)ANGLE_FROM_DEGREES(1.8);
+		params.errorPinMode = ERROR_PIN_MODE_ENABLE;  //default to enable pin
 		nvmWriteSystemParms(params);
 	}
-
 	//the motor parameters are check in the stepper_controller code
 	// as that there we can auto set much of them.
-
-
 }
-
-
 
 void SYSCTRL_Handler(void)
 {
@@ -524,6 +503,7 @@ static void syncBOD33(void)  {
 		//		}
 	}
 }
+
 static void configure_bod(void)
 {
 	//syncBOD33();
@@ -558,16 +538,14 @@ void NZS::begin(void)
 	//setup the serial port for syslog
 	Serial5.begin(SERIAL_BAUD);
 
-
 #ifndef CMD_SERIAL_PORT
-	SysLogInit(&Serial5,LOG_DEBUG); //use SWO for the sysloging
+	SysLogInit(&Serial5, LOG_DEBUG); //use SWO for the sysloging
 #else
 	SysLogInit(NULL, LOG_WARNING);
 #endif
 
 	LOG("Power up!");
 	pinMode(PIN_USB_PWR, INPUT);
-
 
 	if (digitalRead(PIN_USB_PWR))
 	{
@@ -589,23 +567,23 @@ void NZS::begin(void)
 	validateAndInitNVMParams();
 
 	LOG("EEPROM INIT");
+ 
 	if (EEPROM_OK == eepromInit()) //init the EEPROM
 	{
 		eepromRead((uint8_t *)&PowerupEEPROM, sizeof(PowerupEEPROM));
 	}
-	configure_bod(); //configure the BOD
 
+	configure_bod();		//configure the BOD
+
+//#ifndef DISABLE_LCD
 	LOG("Testing LCD");
 	Lcd.begin(&stepperCtrl);
-	Lcd.lcdShow("Misfit"," Tech", VERSION);
-
+	Lcd.showSplash();
+//#endif
 
 	LOG("command init!");
 	commandsInit(); //setup command handler system
-
-
-	stepCtrlError=STEPCTRL_NO_CAL;
-
+	stepCtrlError = STEPCTRL_NO_CAL;
 
 	while (STEPCTRL_NO_ERROR != stepCtrlError)
 	{
@@ -615,22 +593,21 @@ void NZS::begin(void)
 		//todo we need to handle error on LCD and through command line
 		if (STEPCTRL_NO_POWER == stepCtrlError)
 		{
-
 			SerialUSB.println("Appears that there is no Motor Power");
 			SerialUSB.println("Connect motor power!");
-
-			Lcd.lcdShow("Waiting", "MOTOR", "POWER");
-
+#ifndef DISABLE_LCD
+			Lcd.lcdShow("Waiting:", "Motor", "Power");
+#endif
 			while (STEPCTRL_NO_POWER == stepCtrlError)
 			{
 				stepCtrlError=stepperCtrl.begin(); //start controller before accepting step inputs
 			}
-
 		}
 
 		if (STEPCTRL_NO_CAL == stepCtrlError)
 		{
 			SerialUSB.println("You need to Calibrate");
+#ifndef DISABLE_LCD
 			Lcd.lcdShow("   NOT ", "Calibrated", " ");
 			delay(1000);
 			Lcd.setMenu(MenuCal);
@@ -640,13 +617,11 @@ void NZS::begin(void)
 			while(false == stepperCtrl.calibrationValid())
 			{
 				commandsProcess(); //handle commands
-
 				Lcd.process();
-
 			}
 
 			Lcd.setMenu(NULL);
-
+#endif
 		}
 
 		if (STEPCTRL_NO_ENCODER == stepCtrlError)
@@ -654,9 +629,9 @@ void NZS::begin(void)
 			SerialUSB.println("AS5047D not working");
 			SerialUSB.println(" try disconnecting power from board for 15+mins");
 			SerialUSB.println(" you might have to short out power pins to ground");
-
+#ifndef DISABLE_LCD
 			Lcd.lcdShow("Encoder", " Error!", " REBOOT");
-
+#endif
 			while(1)
 			{
 
@@ -664,9 +639,9 @@ void NZS::begin(void)
 		}
 
 	}
-
+#ifndef DISABLE_LCD
 	Lcd.setMenu(MenuMain);
-
+#endif
 
 	attachInterrupt(digitalPinToInterrupt(PIN_STEP_INPUT), stepInput, RISING);
 
@@ -766,8 +741,9 @@ void NZS::loop(void)
 	eepromWriteCache((uint8_t *)&eepromData,sizeof(eepromData));
 
 	commandsProcess(); //handle commands
-
+#ifndef DISABLE_LCD
 	Lcd.process();
+#endif
 	//stepperCtrl.PrintData(); //prints steps and angle to serial USB.
 
 	printLocation(); //print out the current location

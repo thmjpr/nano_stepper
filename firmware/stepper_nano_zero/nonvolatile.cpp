@@ -13,9 +13,6 @@
 #include "Flash.h"  //thanks to Kent Larsen for pointing out the lower case error
 #include <Arduino.h>
 
-
-
-
 //we use this so we can hard code calibration table
 // be sure to set the last word as status flag
 // this save time calibrating each time we do a code build
@@ -28,15 +25,9 @@ __attribute__((__aligned__(FLASH_ROW_SIZE))) const uint16_t NVM_flash[256]={  //
 		0xFFFF
 };
 
-
-
 static_assert (sizeof(nvm_t)<sizeof(NVM_flash), "nvm_t structure larger than allocated memory");
 
-
-
-
 //FLASH_ALLOCATE(NVM_flash, sizeof(nvm_t));
-
 
 bool nvmWriteCalTable(void *ptrData, uint32_t size)
 {

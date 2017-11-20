@@ -10,8 +10,8 @@
  *	All text above, must be included in any redistribution
  *********************************************************************/
 #include "stepper_controller.h"
-
-#include "nonvolatile.h" //for programmable parameters
+#include "nzs_lcd.h"
+#include "nonvolatile.h"		//for programmable parameters
 #include <Wire.h>
 #include <inttypes.h>
 
@@ -20,12 +20,10 @@
 
 #define WAIT_TC16_REGS_SYNC(x) while(x->COUNT16.STATUS.bit.SYNCBUSY);
 
-volatile bool TC5_ISR_Enabled=false;
+volatile bool TC5_ISR_Enabled = false;
 
-void setupTCInterrupts() {
-
-
-
+void setupTCInterrupts() 
+{
    // Enable GCLK for TC4 and TC5 (timer counter input clock)
    GCLK->CLKCTRL.reg = (uint16_t) (GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN_GCLK0 | GCLK_CLKCTRL_ID(GCM_TC4_TC5));
    while (GCLK->STATUS.bit.SYNCBUSY);
@@ -42,31 +40,25 @@ void setupTCInterrupts() {
    TC5->COUNT16.CTRLA.reg |= TC_CTRLA_PRESCALER_DIV1;   // Set perscaler
    WAIT_TC16_REGS_SYNC(TC5)
 
-
    TC5->COUNT16.CC[0].reg = F_CPU/NZS_CONTROL_LOOP_HZ;
    WAIT_TC16_REGS_SYNC(TC5)
-
 
    TC5->COUNT16.INTENSET.reg = 0;              // disable all interrupts
    TC5->COUNT16.INTENSET.bit.OVF = 1;          // enable overfollow
    //  TC5->COUNT16.INTENSET.bit.MC0 = 1;         // enable compare match to CC0
 
-
    NVIC_SetPriority(TC5_IRQn, 2);
-
 
    // Enable InterruptVector
    NVIC_EnableIRQ(TC5_IRQn);
 
-
    // Enable TC
    TC5->COUNT16.CTRLA.reg |= TC_CTRLA_ENABLE;
    WAIT_TC16_REGS_SYNC(TC5)
-
 }
 
-static void enableTCInterrupts() {
-
+static void enableTCInterrupts()  
+{
    TC5_ISR_Enabled=true;
    NVIC_EnableIRQ(TC5_IRQn);
    TC5->COUNT16.INTENSET.bit.OVF = 1;
@@ -74,16 +66,16 @@ static void enableTCInterrupts() {
    //  WAIT_TC16_REGS_SYNC(TC5)                      //wait for sync
 }
 
-static void disableTCInterrupts() {
-
-   TC5_ISR_Enabled=false;
+static void disableTCInterrupts() 
+{
+   TC5_ISR_Enabled = false;
    //NVIC_DisableIRQ(TC5_IRQn);
    TC5->COUNT16.INTENCLR.bit.OVF = 1;
 }
 
 static bool enterCriticalSection()
 {
-   bool state=TC5_ISR_Enabled;
+   bool state = TC5_ISR_Enabled;
    disableTCInterrupts();
    return state;
 }
@@ -99,19 +91,19 @@ static void exitCriticalSection(bool prevState)
 
 void StepperCtrl::updateParamsFromNVM(void)
 {
-   bool state=enterCriticalSection();
+   bool state = enterCriticalSection();
 
-   pPID.Kd=NVM->pPID.Kd*CTRL_PID_SCALING;
-   pPID.Ki=NVM->pPID.Ki*CTRL_PID_SCALING;
-   pPID.Kp=NVM->pPID.Kp*CTRL_PID_SCALING;
+   pPID.Kd = NVM->pPID.Kd*CTRL_PID_SCALING;
+   pPID.Ki = NVM->pPID.Ki*CTRL_PID_SCALING;
+   pPID.Kp = NVM->pPID.Kp*CTRL_PID_SCALING;
 
-   vPID.Kd=NVM->vPID.Kd*CTRL_PID_SCALING;
-   vPID.Ki=NVM->vPID.Ki*CTRL_PID_SCALING;
-   vPID.Kp=NVM->vPID.Kp*CTRL_PID_SCALING;
+   vPID.Kd = NVM->vPID.Kd*CTRL_PID_SCALING;
+   vPID.Ki = NVM->vPID.Ki*CTRL_PID_SCALING;
+   vPID.Kp = NVM->vPID.Kp*CTRL_PID_SCALING;
 
-   sPID.Kd=NVM->sPID.Kd*CTRL_PID_SCALING;
-   sPID.Ki=NVM->sPID.Ki*CTRL_PID_SCALING;
-   sPID.Kp=NVM->sPID.Kp*CTRL_PID_SCALING;
+   sPID.Kd = NVM->sPID.Kd*CTRL_PID_SCALING;
+   sPID.Ki = NVM->sPID.Ki*CTRL_PID_SCALING;
+   sPID.Kp = NVM->sPID.Kp*CTRL_PID_SCALING;
 
    if (NVM->SystemParams.parametersVaild)
    {
@@ -119,11 +111,11 @@ void StepperCtrl::updateParamsFromNVM(void)
    }else
    {
       ERROR("This should never happen but just in case");
-      systemParams.microsteps=16;
-      systemParams.controllerMode=CTRL_SIMPLE;
-      systemParams.dirPinRotation=CW_ROTATION; //default to clockwise rotation when dir is high
-      systemParams.errorLimit=(int32_t)ANGLE_FROM_DEGREES(1.8);
-      systemParams.errorPinMode=ERROR_PIN_MODE_ENABLE;  //default to enable pin
+      systemParams.microsteps = 16;
+      systemParams.controllerMode = CTRL_SIMPLE;
+      systemParams.dirPinRotation = CW_ROTATION; //default to clockwise rotation when dir is high
+      systemParams.errorLimit = (int32_t)ANGLE_FROM_DEGREES(1.8);
+      systemParams.errorPinMode = ERROR_PIN_MODE_ENABLE;  //default to enable pin
    }
 
    //default the error pin to input, if it is an error pin the
@@ -139,26 +131,24 @@ void StepperCtrl::updateParamsFromNVM(void)
    } else
    {
       //MotorParams_t Params;
-      motorParams.fullStepsPerRotation=200;
-      motorParams.currentHoldMa=500;
-      motorParams.currentMa=1500;
-      motorParams.motorWiring=true;
+      motorParams.fullStepsPerRotation = 200;
+      motorParams.currentHoldMa = 500;
+      motorParams.currentMa = 1000;
+      motorParams.motorWiring = true;
       //memcpy((void *)&Params, (void *)&motorParams, sizeof(motorParams));
       //nvmWriteMotorParms(Params);
    }
 
    stepperDriver.setRotationDirection(motorParams.motorWiring);
-
    exitCriticalSection(state);
 }
-
 
 void  StepperCtrl::motorReset(void)
 {
    //when we reset the motor we want to also sync the motor
    // phase.  Therefore we move forward a few full steps then back
    // to sync motor phasing, leaving the motor at "phase 0"
-   bool state=enterCriticalSection();
+   bool state = enterCriticalSection();
 
    //	stepperDriver.move(0,motorParams.currentMa);
    //	delay(100);
@@ -181,8 +171,8 @@ void  StepperCtrl::motorReset(void)
 
 void StepperCtrl::setLocationFromEncoder(void)
 {
-   numSteps=0;
-   currentLocation=0;
+   numSteps = 0;
+   currentLocation = 0;
 
    if (calTable.calValid())
    {
@@ -191,9 +181,8 @@ void StepperCtrl::setLocationFromEncoder(void)
       Angle a;
 
       //set our angles based on previous cal data
-
-      x=sampleMeanEncoder(200);
-      a=calTable.fastReverseLookup(x);
+      x = sampleMeanEncoder(200);
+      a = calTable.fastReverseLookup(x);
 
       //our cal table starts at angle zero, so lets set starting based on this and stepsize
       LOG("start angle %d, encoder %d", (uint16_t)a,x);
@@ -211,44 +200,41 @@ void StepperCtrl::setLocationFromEncoder(void)
 	 a=(uint16_t)((calIndex*ANGLE_STEPS)/CALIBRATION_TABLE_SIZE);
       }
 
-
-      x=(int32_t)((((float)(uint16_t)a)*360.0/(float)ANGLE_STEPS)*1000);
+      x = (int32_t)((((float)(uint16_t)a)*360.0/(float)ANGLE_STEPS)*1000);
       LOG("start angle after rounding %d %d.%03d", (uint16_t)a,x/1000,x%1000);
 
       //we need to set our numSteps
-      numSteps=DIVIDE_WITH_ROUND( ((int32_t)a *motorParams.fullStepsPerRotation*systemParams.microsteps),ANGLE_STEPS);
-      currentLocation=(uint16_t)a;
+      numSteps = DIVIDE_WITH_ROUND( ((int32_t)a *motorParams.fullStepsPerRotation*systemParams.microsteps),ANGLE_STEPS);
+      currentLocation = (uint16_t)a;
    }
-   zeroAngleOffset=getCurrentLocation();
+   zeroAngleOffset = getCurrentLocation();
 }
 
 int64_t StepperCtrl::getZeroAngleOffset(void)
 {
    int64_t x;
-   bool state=enterCriticalSection();
+   bool state = enterCriticalSection();
 
-   x=zeroAngleOffset;
-
+   x = zeroAngleOffset;
    exitCriticalSection(state);
+
    return x;
 }
 
 void StepperCtrl::setAngle(int64_t angle)
 {
-   bool state=enterCriticalSection();
+   bool state = enterCriticalSection();
 
-   zeroAngleOffset=getCurrentLocation()-angle;
-
+   zeroAngleOffset = getCurrentLocation() - angle;
    exitCriticalSection(state);
 }
 
 void StepperCtrl::setZero(void)
 {
    //we want to set the starting angle to zero.
-   bool state=enterCriticalSection();
+   bool state = enterCriticalSection();
 
-   zeroAngleOffset=getCurrentLocation();
-
+   zeroAngleOffset = getCurrentLocation();
    exitCriticalSection(state);
 }
 
@@ -256,7 +242,6 @@ void StepperCtrl::encoderDiagnostics(char *ptrStr)
 {
    bool state=TC5_ISR_Enabled;
    disableTCInterrupts();
-
    encoder.diagnostics(ptrStr);
 
    if (state) enableTCInterrupts();
@@ -268,14 +253,15 @@ void StepperCtrl::encoderDiagnostics(char *ptrStr)
 //return is anlge in degreesx100 ie 360.0 is returned as 36000
 float StepperCtrl::measureStepSize(void)
 {
-   int32_t angle1,angle2,x,i;
-   bool feedback=enableFeedback;
-   int32_t microsteps=systemParams.microsteps;
+   int32_t angle1, angle2, x, i;
+   bool feedback = enableFeedback;
+   int32_t microsteps = systemParams.microsteps;
 
-   systemParams.microsteps=1;
-   enableFeedback=false;
-   motorParams.motorWiring=true; //assume we are forward wiring to start with
+   systemParams.microsteps = 1;
+   enableFeedback = false;
+   motorParams.motorWiring = true; //assume we are forward wiring to start with
    stepperDriver.setRotationDirection(motorParams.motorWiring);
+
    /////////////////////////////////////////
    //// Measure the full step size /////
    /// Note we assume machine can take one step without issue///
@@ -284,30 +270,30 @@ float StepperCtrl::measureStepSize(void)
    motorReset(); //this puts stepper motor at stepAngle of zero
 
    LOG("sample encoder");
-
-   angle1=sampleMeanEncoder(200);
+   angle1 = sampleMeanEncoder(200);
 
    LOG("move");
-   stepperDriver.move(A4954_NUM_MICROSTEPS/2,motorParams.currentMa); //move one half step 'forward'
+   stepperDriver.move(A4954_NUM_MICROSTEPS/2, motorParams.currentMa); //move one half step 'forward'
    delay(100);
-   stepperDriver.move(A4954_NUM_MICROSTEPS,motorParams.currentMa); //move one half step 'forward'
+   stepperDriver.move(A4954_NUM_MICROSTEPS, motorParams.currentMa); //move one half step 'forward'
    delay(500);
+
    LOG("sample encoder");
-   angle2=sampleMeanEncoder(200);
+   angle2 = sampleMeanEncoder(200);
 
    LOG("Angles %d %d",angle1,angle2);
-   if ((abs(angle2-angle1))>(ANGLE_STEPS/2))
+   if ((abs(angle2 - angle1)) > (ANGLE_STEPS/2))
    {
       //we crossed the wrap around
-      if (angle1>angle2)
+      if (angle1 > angle2)
       {
-	 angle1=angle1+(int32_t)ANGLE_STEPS;
+	 angle1 = angle1 + (int32_t)ANGLE_STEPS;
       }else
       {
-	 angle2=angle2+(int32_t)ANGLE_STEPS;
+	 angle2 = angle2 + (int32_t)ANGLE_STEPS;
       }
    }
-   LOG("Angles %d %d",angle1,angle2);
+   LOG("Angles %d %d", angle1, angle2);
 
    //when we are increase the steps in the  stepperDriver.move() command
    // we want the encoder increasing. This ensures motor is moving clock wise
@@ -326,17 +312,17 @@ float StepperCtrl::measureStepSize(void)
    //	}
    x=((int64_t)(angle2-angle1)*36000)/(int32_t)ANGLE_STEPS;
    // if x is ~180 we have a 1.8 degree step motor, if it is ~90 we have 0.9 degree step
-   LOG("%angle delta %d %d (%d %d)",x,abs(angle2-angle1),angle1,angle2 );
+   LOG("%angle delta %d %d (%d %d)",x,abs(angle2-angle1), angle1, angle2);
 
    //move back
-   stepperDriver.move(-A4954_NUM_MICROSTEPS/2,motorParams.currentMa); //move one half step 'forward'
+   stepperDriver.move(-A4954_NUM_MICROSTEPS/2, motorParams.currentMa); //move one half step 'forward'
    delay(100);
-   stepperDriver.move(-A4954_NUM_MICROSTEPS,motorParams.currentMa); //move one half step 'forward'
+   stepperDriver.move(-A4954_NUM_MICROSTEPS, motorParams.currentMa); //move one half step 'forward'
 
-   systemParams.microsteps=microsteps;
-   enableFeedback=feedback;
+   systemParams.microsteps = microsteps;
+   enableFeedback = feedback;
 
-   return ((float)x)/100.0;
+   return (float)x / 100.0;
 }
 
 
@@ -361,30 +347,27 @@ bool StepperCtrl::changeMicrostep(uint16_t microSteps)
 Angle StepperCtrl::maxCalibrationError(void)
 {
    //Angle startingAngle;
-   bool done=false;
+   bool done = false;
    int32_t mean;
-   int32_t maxError=0, j;
+   int32_t maxError = 0, j = 0;
    int16_t dist;
-   uint16_t angle=0;
-   bool feedback=enableFeedback;
-   uint16_t microSteps=systemParams.microsteps;
-   int32_t steps;
-   bool state=TC5_ISR_Enabled;
-   disableTCInterrupts();
+   uint16_t angle = 0;
+   bool feedback = enableFeedback;
+   uint16_t microSteps = systemParams.microsteps;
+   int32_t steps = 0;
+   bool state = TC5_ISR_Enabled;
 
+   disableTCInterrupts();
 
    if (false == calTable.calValid())
    {
       return ANGLE_MAX;
    }
 
-   enableFeedback=false;
-   j=0;
-   LOG("Running calibration test");
-
-   systemParams.microsteps=1;
+   systemParams.microsteps = 1;
+   enableFeedback = false;
    motorReset();
-   steps=0;
+   LOG("Running calibration test");
 
    while(!done)
    {
@@ -410,49 +393,44 @@ Angle StepperCtrl::maxCalibrationError(void)
       updateStep(0,1);
 
       // move one half step at a time, a full step move could cause a move backwards depending on how current ramps down
-      steps+=A4954_NUM_MICROSTEPS/2;
+      steps += A4954_NUM_MICROSTEPS/2;
       stepperDriver.move(steps,motorParams.currentMa);
 
       delay(50);
-      steps+=A4954_NUM_MICROSTEPS/2;
+      steps += A4954_NUM_MICROSTEPS/2;
       stepperDriver.move(steps,motorParams.currentMa);
 
 
-      if (400==motorParams.fullStepsPerRotation)
+      if (400 == motorParams.fullStepsPerRotation)
       {
-	 delay(100);
-	 updateStep(0,1);
-	 // move one half step at a time, a full step move could cause a move backwards depending on how current ramps down
-	 steps+=A4954_NUM_MICROSTEPS/2;
-	 stepperDriver.move(steps,motorParams.currentMa);
+		delay(100);
+		updateStep(0,1);
+		// move one half step at a time, a full step move could cause a move backwards depending on how current ramps down
+		steps += A4954_NUM_MICROSTEPS/2;
+		stepperDriver.move(steps,motorParams.currentMa);
 
-	 delay(100);
-	 steps+=A4954_NUM_MICROSTEPS/2;
-	 stepperDriver.move(steps,motorParams.currentMa);
+		delay(100);
+		steps += A4954_NUM_MICROSTEPS/2;
+		stepperDriver.move(steps,motorParams.currentMa);
       }
-      //delay(400);
 
       if (abs(dist)>maxError)
       {
-	 maxError=abs(dist);
+		maxError = abs(dist);
       }
 
-      j++;
-      if (j>=(1*CALIBRATION_TABLE_SIZE+3))
+      if (++j >= (1*CALIBRATION_TABLE_SIZE+3))
       {
-	 done=true;
+		done = true;
       }
-
-
    }
-   systemParams.microsteps=microSteps;
+   systemParams.microsteps = microSteps;
    motorReset();
-   enableFeedback=feedback;
+   enableFeedback = feedback;
    if (state) enableTCInterrupts();
    LOG("max error is %d cnts", maxError);
    return Angle((uint16_t)maxError);
 }
-
 
 //The encoder needs to be calibrated to the motor.
 // we will assume full step detents are correct,
@@ -460,78 +438,76 @@ Angle StepperCtrl::maxCalibrationError(void)
 // We also need to calibrate the phasing of the motor
 // to the A4954. This requires that the A4954 "step angle" of
 // zero is the first entry in the calibration table.
-bool StepperCtrl::calibrateEncoder(void)
+bool StepperCtrl::calibrateEncoder(NZS_LCD * lcd_d)
 {
-   int32_t x,i,j;
-   uint32_t angle=0;
-   int32_t steps;
-   bool done=false;
+   int32_t x, i, j = 0;
+   uint32_t angle = 0;
+   int32_t steps = 0;
+   bool done = false;
 
    int32_t mean;
-   uint16_t microSteps=systemParams.microsteps;
-   bool feedback=enableFeedback;
-   bool state=TC5_ISR_Enabled;
+   uint16_t microSteps = systemParams.microsteps;
+   bool feedback = enableFeedback;
+   bool state = TC5_ISR_Enabled;
 
    disableTCInterrupts();
 
-   enableFeedback=false;
-   systemParams.microsteps=1;
+   enableFeedback = false;
+   systemParams.microsteps = 1;
    LOG("reset motor");
    motorReset();
    LOG("Starting calibration");
    delay(200);
-   steps=0;
-   j=0;
+
    while(!done)
    {
-      int ii,N;
-      Angle cal,desiredAngle;
-      desiredAngle=(uint16_t)(getDesiredLocation() & 0x0FFFFLL);
-      cal=calTable.getCal(desiredAngle);
+      int ii, N;
+      Angle cal, desiredAngle;
+      desiredAngle = (uint16_t)(getDesiredLocation() & 0x0FFFFLL);
+      cal = calTable.getCal(desiredAngle);
+
+#ifndef DISABLE_LCD
+	  if(lcd_d != nullptr)
+	  lcd_d->showCalibration(j+1);
+#endif	  
+
       delay(200);
-      mean=sampleMeanEncoder(200);
+      mean = sampleMeanEncoder(200);
 
       LOG("Previous cal distance %d, %d, mean %d, cal %d",j, cal-Angle((uint16_t)mean), mean, (uint16_t)cal);
 
-      calTable.updateTableValue(j,mean);
-
+      calTable.updateTableValue(j, mean);
       updateStep(0,1);
+      N = 2;
 
-      N=2;
       // move one half step at a time, a full step move could cause a move backwards depending on how current ramps down
-      for (ii=0; ii<N; ii++)
-      {
-	 steps+=A4954_NUM_MICROSTEPS/N;
-	 stepperDriver.move(steps,motorParams.currentMa);
+      for (ii=0 ; ii<N ; ii++)
+		{
+		steps += A4954_NUM_MICROSTEPS/N;
+		stepperDriver.move(steps, motorParams.currentMa);
+		delay(50);
+		}
 
-	 delay(50);
-      }
-      //steps+=A4954_NUM_MICROSTEPS/2;
+	  //steps += A4954_NUM_MICROSTEPS/2;
       //stepperDriver.move(steps,motorParams.currentMa);
 
-
-
-      if (400==motorParams.fullStepsPerRotation)
+      if (400 == motorParams.fullStepsPerRotation)
       {
-	 delay(100);
-	 updateStep(0,1);
-	 // move one half step at a time, a full step move could cause a move backwards depending on how current ramps down
-	 steps+=A4954_NUM_MICROSTEPS/2;
-	 stepperDriver.move(steps,motorParams.currentMa);
+		delay(100);
+		updateStep(0,1);
+		// move one half step at a time, a full step move could cause a move backwards depending on how current ramps down
+		steps += A4954_NUM_MICROSTEPS/2;
+		stepperDriver.move(steps, motorParams.currentMa);
 
-	 delay(100);
-	 steps+=A4954_NUM_MICROSTEPS/2;
-	 stepperDriver.move(steps,motorParams.currentMa);
-
+		delay(100);
+		steps += A4954_NUM_MICROSTEPS/2;
+		stepperDriver.move(steps, motorParams.currentMa);
       }
 
-      j++;
-      if (j>=CALIBRATION_TABLE_SIZE)
+      if (++j >= CALIBRATION_TABLE_SIZE)
       {
-	 done=true;
+		done = true;
       }
-
-
    }
    //calTable.printCalTable();
    //calTable.smoothTable();
@@ -539,9 +515,9 @@ bool StepperCtrl::calibrateEncoder(void)
    calTable.saveToFlash(); //saves the calibration to flash
    calTable.printCalTable();
 
-   systemParams.microsteps=microSteps;
+   systemParams.microsteps = microSteps;
    motorReset();
-   enableFeedback=feedback;
+   enableFeedback = feedback;
    if (state) enableTCInterrupts();
    return done;
 }
@@ -694,33 +670,33 @@ Angle StepperCtrl::sampleMeanEncoder(int32_t numSamples)
       }
       if(i==0)
       {
-	 last=x;
-	 min=x;
-	 max=x;
+		last = x;
+		min = x;
+		max = x;
       }
       //LOG("i %d,min %d, max %d, last %d, x %d", i, min, max, last, x);
       if (abs(last-x)>65536/2)
       {
 	 if (last>x)
 	 {
-	    x=x+65536;
+	    x = x+65536;
 	 } else
 	 {
-	    x=x-65536;
+	    x = x-65536;
 	 }
-      }
+	  }
 
 
-      if (x>max)
+      if (x > max)
       {
-	 max=x;
+		max = x;
       }
-      if (x<min)
+      if (x < min)
       {
-	 min=x;
+		min = x;
       }
 
-      mean=mean+(x);
+      mean += x;
    }
 
    LOG("min %d, max %d, mean %d", min, max, (int32_t)(mean/numSamples));
@@ -740,14 +716,14 @@ void StepperCtrl::feedback(bool enable)
 
 void StepperCtrl::updateStep(int dir, uint16_t steps)
 {
-   bool state=TC5_ISR_Enabled;
+   bool state = TC5_ISR_Enabled;
    disableTCInterrupts();
    if (dir)
    {
-      numSteps-=steps;
+      numSteps -= steps;
    }else
    {
-      numSteps+=steps;
+      numSteps += steps;
    }
    if (state) enableTCInterrupts();
 }
@@ -760,10 +736,10 @@ void StepperCtrl::requestStep(int dir, uint16_t steps)
 
    if (dir)
    {
-      numSteps-=steps;
+      numSteps -= steps;
    }else
    {
-      numSteps+=steps;
+      numSteps += steps;
    }
 
    if (false == enableFeedback)
@@ -1291,7 +1267,7 @@ void StepperCtrl::testRinging(void)
 	{
 		SerialUSB.print("Current ");
 		SerialUSB.println(c);
-		steps+=A4954_NUM_MICROSTEPS;
+		steps += A4954_NUM_MICROSTEPS;
 		stepperDriver.move(steps,NVM->SystemParams.currentMa);
 		currentLimit=false;
 		measure();

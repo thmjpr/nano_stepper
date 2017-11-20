@@ -17,6 +17,7 @@
 //uncomment this if you are using the Mechaduino hardware
 //#define MECHADUINO_HARDWARE
 
+
 //uncomment the follow lines if using the NEMA 23 10A hardware
 //#define NEMA_23_10A_HW
 
@@ -26,13 +27,13 @@
 //The March 21 2017 NEMA 17 Smart Stepper has changed some pin outs
 // A1 was changed to read motor voltage, hence SW4 is now using D4
 // comment out this next line if using the older hardware
-#define NEMA17_SMART_STEPPER_3_21_2017
+//#define NEMA17_SMART_STEPPER_3_21_2017
+#define NZ_STEPPER_2017
 
-#define NZS_FAST_CAL // define this to use 32k of flash for fast calibration table
-#define NZS_FAST_SINE //uses 2048 extra bytes to implement faster sine tables
+#define NZS_FAST_CAL	// define this to use 32k of flash for fast calibration table
+#define NZS_FAST_SINE	//uses 2048 extra bytes to implement faster sine tables
 
-
-#define NZS_AS5047_PIPELINE //does a pipeline read of encoder, which is slightly faster
+#define NZS_AS5047_PIPELINE	//does a pipeline read of encoder, which is slightly faster
 
 #define NZS_CONTROL_LOOP_HZ (6000) //update rate of control loop
 
@@ -43,14 +44,13 @@
 //#define ENABLE_PHASE_PREDICTION //this enables prediction of phase at high velocity to increase motor speed
 								//as of FW0.11 it is considered development only
 
-#define VERSION "FW: 0.20" //this is what prints on LCD during splash screen
+#define VERSION "FW: 0.22x"		//this is what prints on LCD during splash screen
+#define BUILD_DATE __DATE__		//Build date, 11 char long
 
 //Define this to allow command out serial port, else hardware serial is debug log
 //#define CMD_SERIAL_PORT
 
 #define SERIAL_BAUD (115200) //baud rate for the serial ports
-
-
 #define F_CPU (48000000UL)
 
 
@@ -116,6 +116,8 @@
  * 	     - Added faster detection of USB not being plugged in, reduces power up time with no USB
  * 	0.19 - removed debug information in the ssd1306 driver which caused LCD not always to be found
  *	0.20 - Fixed bug in calibration, thanks to Oliver E.
+ *	0.21 - Fixed issues compiling for mechaduino, including disabling LCD for MEchaduino
+ *	0.22 - Added home command
  */
 
 
@@ -132,7 +134,6 @@ typedef enum {
 	ERROR_PIN_MODE_ACTIVE_LOW_ENABLE=1, //error pin works like enable on step sticks
 	ERROR_PIN_MODE_ERROR=2,  //error pin is low when there is angle error
 	ERROR_PIN_MODE_BIDIR=3,   //error pin is bidirection open collector
-
 } ErrorPinMode_t;
 
 typedef enum {
@@ -158,13 +159,13 @@ typedef enum {
 //TC3 is used for planner tick
 
 
-
 //mechaduio and Arduino Zero has defined serial ports differently than NZS
 #ifdef MECHADUINO_HARDWARE
-#warning "Compiling source for Mechaduino NOT NZS"
-#define Serial5 Serial 
+ #warning "Compiling source for Mechaduino NOT NZS"
+ #define DISABLE_LCD
+ #define Serial5 Serial 
 #else
-#define SerialUSB Serial
+ #define SerialUSB Serial
 #endif 
 
 #define PIN_STEP_INPUT  (0)
@@ -175,21 +176,28 @@ typedef enum {
 #define PIN_MISO        (22)
 
 #ifdef MECHADUINO_HARDWARE
-#define PIN_ERROR 		(19)  //analogInputToDigitalPin(PIN_A5))
-#else //not Mechaduino hardware
-#ifdef NEMA17_SMART_STEPPER_3_21_2017
-#define PIN_SW1		(19)//analogInputToDigitalPin(PIN_A5))
-#define PIN_SW3		(14)//analogInputToDigitalPin(PIN_A0))
-#define PIN_SW4		(2)//D2
-#define PIN_ENABLE	(10)
-#define PIN_ERROR	(3)
-#else
-#define PIN_SW1		(19)//analogInputToDigitalPin(PIN_A5))
-#define PIN_SW3		(14)//analogInputToDigitalPin(PIN_A0))
-#define PIN_SW4		(15)//analogInputToDigitalPin(PIN_A1))
-#define PIN_ERROR		(10)
+ #define PIN_ERROR 		(19)  //analogInputToDigitalPin(PIN_A5))
+#elif defined NEMA17_SMART_STEPPER_3_21_2017
+ #define PIN_SW1		(19)	//analogInputToDigitalPin(PIN_A5))
+ #define PIN_SW3		(14)	//analogInputToDigitalPin(PIN_A0))
+ #define PIN_SW4		(2)	//D2
+ #define PIN_ENABLE	(10)
+ #define PIN_ERROR	(3)
+#elif defined NZ_STEPPER_2017		//NZstepper hardware
+ #define PIN_SW1		(19)	//analogInputToDigitalPin(PIN_A5))
+ #define PIN_SW3		(14)	//analogInputToDigitalPin(PIN_A0))
+ #define PIN_SW4		(15)	//analogInputToDigitalPin(PIN_A1))
+ #define PIN_ERROR		(10)
+ #define PIN_ENABLE		(3)
+#else				//Nano zero stepper (version without reading motor voltage)
+ #define PIN_SW1		(19)	//analogInputToDigitalPin(PIN_A5))
+ #define PIN_SW3		(14)	//analogInputToDigitalPin(PIN_A0))
+ #define PIN_SW4		(15)	//analogInputToDigitalPin(PIN_A1))
+ #define PIN_ERROR		(10)
 #endif
 
+#ifdef A5995_DRIVER
+#define PIN_ENABLE	(3)
 #endif
 
 #define PIN_SCL (21)
@@ -201,8 +209,8 @@ typedef enum {
 #define PIN_AS5047D_PWR	(11) //pull low to power on AS5047D
 #endif
 
-//these pins use the TIMER in the A4954 driver
-// changing the pin definitions here may require changes in the A4954.cpp file
+//These pins use the TIMER in the A4954 driver
+//changing the pin definitions here may require changes in the A4954.cpp file
 
 #define PIN_FET_IN1		(5) //PA15 TC3/WO[1] TCC0/WO[5]1
 #define PIN_FET_IN2		(6) //PA20 TC7/W0[0] TCC0/WO[6]2
@@ -211,13 +219,14 @@ typedef enum {
 #define PIN_FET_VREF1	(4)
 #define PIN_FET_VREF2	(3)
 #define PIN_FET_ENABLE		(12)
+
 //current sense pin from each H-bridge
 #define ISENSE_FET_A	 (17) //analogInputToDigitalPin(PIN_A3)
 #define ISENSE_FET_B	 (8)
+
 //Comparators analog inputs
 //#define COMP_FET_A		 (18)//analogInputToDigitalPin(PIN_A4))
 //#define COMP_FET_B		 (9)
-
 
 //these are the pins used on the A5995 driver
 #define PIN_A5995_ENABLE1 	(2) //PA14
@@ -234,16 +243,13 @@ typedef enum {
 #define PIN_YELLOW_LED  (8)
 #endif
 
-
-
-
 #ifdef NEMA_23_10A_HW
 #undef PIN_YELLOW_LED
 #define PIN_YELLOW_LED  	(26) //TXLED (PA27)
 #endif //NEMA_23_10A_HW
 
 
-#define PIN_RED_LED     (13)
+#define PIN_RED_LED		    (13)
 #define PIN_A4954_IN3		(5)
 #define PIN_A4954_IN4		(6)
 #define PIN_A4954_IN2		(7)
@@ -255,11 +261,8 @@ typedef enum {
 #define PIN_A4954_VREF34	(4)
 #define PIN_A4954_VREF12	(9)
 
-
-
 //Here are some useful macros
 #define DIVIDE_WITH_ROUND(x,y)  ((x+y/2)/y)
-
 
 #define GPIO_LOW(pin) {PORT->Group[g_APinDescription[(pin)].ulPort].OUTCLR.reg = (1ul << g_APinDescription[(pin)].ulPin);}
 #define GPIO_HIGH(pin) {PORT->Group[g_APinDescription[(pin)].ulPort].OUTSET.reg = (1ul << g_APinDescription[(pin)].ulPin);}
@@ -270,24 +273,31 @@ typedef enum {
 #define PIN_GPIO(pin) {PORT->Group[g_APinDescription[(pin)].ulPort].PINCFG[g_APinDescription[(pin)].ulPin].reg &=~(uint8_t)(PORT_PINCFG_INEN | PORT_PINCFG_PMUXEN);}
 #define GPIO_READ(ulPin) {(PORT->Group[g_APinDescription[ulPin].ulPort].IN.reg & (1ul << g_APinDescription[ulPin].ulPin)) != 0}
 #define PIN_PERIPH(pin) {PORT->Group[g_APinDescription[(pin)].ulPort].PINCFG[g_APinDescription[(pin)].ulPin].reg |= PORT_PINCFG_PMUXEN;}
+
 //sets up the pins for the board
 static void boardSetupPins(void)
 {
-	//setup switch pins
+//setup switch pins
 #ifdef PIN_SW1
 	pinMode(PIN_SW1, INPUT_PULLUP);
 	pinMode(PIN_SW3, INPUT_PULLUP);
 	pinMode(PIN_SW4, INPUT_PULLUP);
 #endif
 
+#ifdef NZ_STEPPER_2017
+  pinMode(PIN_STEP_INPUT, INPUT_PULLDOWN);
+  pinMode(PIN_DIR_INPUT, INPUT_PULLDOWN);
+#else
 	pinMode(PIN_STEP_INPUT, INPUT);
 	pinMode(PIN_DIR_INPUT, INPUT);
+#endif
+
 
 #ifdef PIN_ENABLE
 	pinMode(PIN_ENABLE, INPUT_PULLUP); //default error pin as enable pin with pull up
 #endif
-	pinMode(PIN_ERROR, INPUT_PULLUP); //default error pin as enable pin with pull up
 
+	pinMode(PIN_ERROR, INPUT_PULLUP); //default error pin as enable pin with pull up
 	pinMode(PIN_AS5047D_CS,OUTPUT);
 	digitalWrite(PIN_AS5047D_CS,LOW); //pull CS LOW by default (chip powered off)
 
@@ -318,16 +328,13 @@ static void boardSetupPins(void)
 	digitalWrite(PIN_A4954_VREF34,LOW);
 	pinMode(PIN_A4954_VREF34, OUTPUT);
 	pinMode(PIN_A4954_VREF12, OUTPUT);
-
-
-
+	
 	pinMode(PIN_RED_LED,OUTPUT);
+
 #ifdef PIN_YELLOW_LED
 	pinMode(PIN_YELLOW_LED,OUTPUT);
 	digitalWrite(PIN_YELLOW_LED,HIGH);
 #endif
-
-
 }
 
 static void inline YELLOW_LED(bool state)
@@ -375,4 +382,3 @@ static inline void SET_PIN_PERHERIAL(uint16_t ulPin,EPioType ulPeripheral)
 }
 
 #endif//__BOARD_H__
-

@@ -30,10 +30,11 @@ typedef struct
 
 class NZS //nano Zero Stepper
 {
-
 	public:
 		void begin(void);
 		void loop(void);
+
+	private:
 
 };
 

@@ -15,7 +15,6 @@
 #include "calibration.h"
 #include "board.h"
 
-
 typedef struct {
 	float Kp;
 	float Ki;

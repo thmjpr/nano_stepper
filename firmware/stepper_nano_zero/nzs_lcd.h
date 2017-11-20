@@ -26,6 +26,8 @@
 #include "Adafruit_SSD1306.h"
 #include "gfxfont.h"
 
+#define LCD_WIDTH	128
+#define LCD_HEIGHT	64
 
 typedef struct {
 	char str[15];
@@ -40,10 +42,6 @@ typedef struct {
 
 } menuItem_t;
 
-
-
-
-
 class NZS_LCD
 {
 	private:
@@ -53,25 +51,24 @@ class NZS_LCD
 		menuItem_t *ptrMenu;
 		int32_t menuIndex;
 		bool menuActive;
-
 		options_t *ptrOptions;
 		int32_t optionIndex;
-
 		int32_t buttonState;
+		static const uint8_t icon_splash_screen[];
 
 		void updateLCD(void);
 		void showMenu(void);
 		void updateMenu(void);
 		void showOptions(void);
+
 	public:
 		void forceMenuActive(void);
 		void setMenu(menuItem_t *pMenu);
-		void begin(StepperCtrl *ptrStepperCtrl); //sets up the LCD
-		void process(void); //processes the LCD and updates as needed
+		void begin(StepperCtrl *ptrStepperCtrl);	//sets up the LCD
+		void process(void);							//processes the LCD and updates as needed
 		void showSplash(void);
 		void lcdShow(const char *line1, const char *line2,const char *line3);
-
-
+		void showCalibration(int current_step);
 };
 
 

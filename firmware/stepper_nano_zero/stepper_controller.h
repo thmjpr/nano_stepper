@@ -19,27 +19,25 @@
 #include "A4954.h"
 #include "A5995.h"
 #include "nonvolatile.h"
-#include "fet_driver.h" //for the NEMA23 10A
-
+#include "fet_driver.h"			//for the NEMA23 10A
 
 #define N_DATA (1024)
 
-
 typedef enum {
-	STEPCTRL_NO_ERROR=0,
-	STEPCTRL_NO_POWER=1, //no power to motor
-	STEPCTRL_NO_CAL=2, //calibration not set
-	STEPCTRL_NO_ENCODER=3, //encoder not working
+	STEPCTRL_NO_ERROR =		0,
+	STEPCTRL_NO_POWER =		1, //no power to motor
+	STEPCTRL_NO_CAL =		2, //calibration not set
+	STEPCTRL_NO_ENCODER =	3, //encoder not working
 } stepCtrlError_t;
 
-
+//
 typedef struct {
 		int32_t Kp;
 		int32_t Ki;
 		int32_t Kd;
 } PID_t;
 
-
+//
  typedef __attribute__((packed, aligned(4))) struct {
       int32_t microSecs;
       int32_t desiredLoc;
@@ -48,7 +46,7 @@ typedef struct {
       int32_t ma;
 } Location_t;
 
-
+//
 typedef struct {
       int32_t angle;
       int32_t ma;
@@ -56,10 +54,10 @@ typedef struct {
 
 #define MAX_NUM_LOCATIONS (64) //maximum number of locations to buffer
 
-
-//this scales the PID parameters from Flash to floating point
-// to fixed point int32_t values
+//this scales the PID parameters from Flash to floating point to fixed point int32_t values
 #define CTRL_PID_SCALING (1024)
+
+class NZS_LCD;		//Forward declaration
 
 class StepperCtrl 
 {
@@ -76,16 +74,14 @@ class StepperCtrl
 #endif
 #endif
 		uint16_t startUpEncoder;
-		volatile int32_t ticks=0;
+		volatile int32_t ticks = 0;
 		volatile Location_t locs[MAX_NUM_LOCATIONS];
-		volatile int32_t locReadIndx=0;
-		volatile int32_t locWriteIndx=0;
+		volatile int32_t locReadIndx = 0;
+		volatile int32_t locWriteIndx = 0;
 
 		volatile MotorParams_t motorParams;
 		volatile SystemParams_t systemParams;
 		volatile bool enabled;
-
-
 
 		volatile int32_t loopTimeus; //time to run loop in microseconds
 
@@ -105,10 +101,7 @@ class StepperCtrl
 		// units are in Angles/sec where 1 Angle=360deg/65536
 		volatile int64_t velocity;
 
-		int64_t zeroAngleOffset=0;
-
-
-		//volatile int16_t data[N_DATA];
+		int64_t zeroAngleOffset = 0;
 
 		//does linear interpolation of the encoder calibration table
 		int32_t getAngleCalibration(int32_t encoderAngle);
@@ -124,24 +117,19 @@ class StepperCtrl
 		void  motorReset(void);
 		void updateStep(int dir, uint16_t steps);
 
-
 		bool pidFeedback(int64_t desiredLoc, int64_t currentLoc, Control_t *ptrCtrl);
 		bool simpleFeedback(int64_t desiredLoc, int64_t currentLoc,Control_t *ptrCtrl);
 		bool vpidFeedback(int64_t desiredLoc, int64_t currentLoc,Control_t *ptrCtrl);
 		int64_t getCurrentLocation(void);
 		int64_t getDesiredLocation(void);
-		void updateLocTable(int64_t desiredLoc, int64_t currentLoc,Control_t *ptrCtrl);
-
+		void updateLocTable(int64_t desiredLoc, int64_t currentLoc, Control_t *ptrCtrl);
 		int64_t calculatePhasePrediction(int64_t currentLoc);
 
 	public:
 		uint16_t getStartupEncoder(void) {return startUpEncoder;}
 		int32_t getLocation(Location_t *ptrLoc);
-
 		Angle getEncoderAngle(void);
-
 		void setAngle(int64_t loc);
-
 		int64_t getZeroAngleOffset(void);
 		void PrintData(void);
 		void setVelocity(int64_t vel); //set velocity for vPID mode
@@ -154,7 +142,7 @@ class StepperCtrl
 		CalibrationTable calTable;
 		//void printData(void);
 
-		bool calibrateEncoder(void); //do manual calibration of the encoder
+		bool calibrateEncoder(NZS_LCD * lcd_d = nullptr); //do manual calibration of the encoder
 		Angle maxCalibrationError(void); //measures the maximum calibration error as an angle
 
 		void moveToAbsAngle(int32_t a);
