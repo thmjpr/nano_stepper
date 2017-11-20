@@ -1,7 +1,17 @@
+# Notes
+This is a modication of the nano zero stepper.
+Main changes are:
+
+- Board re-layout
+- Connectors optimized for simplicity/cost
+- Input protection added (fuse and TVS)
+- 12-36V step down section added
+- Inputs are over/under voltage protected (high = 2~24V). No external supply connection needed (w/ level shifter). Tested to 90kHz step speed, limited by firmware. Not opto.
+- Error out open collector
+
+
 # Smart Stepper (also known as the nano zero stepper)
 Firmware to turn a stepper motor into servo motor: see http://misfittech.net for hardware! 
-
-
 
 If you want to support the work on the firmware and hardware consider buying hardware from www.misfittech.net or buying me a beer using the donation button. 
 
