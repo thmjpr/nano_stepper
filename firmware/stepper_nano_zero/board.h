@@ -44,15 +44,17 @@
 //#define ENABLE_PHASE_PREDICTION //this enables prediction of phase at high velocity to increase motor speed
 								//as of FW0.11 it is considered development only
 
-#define VERSION "FW: 0.22x"		//this is what prints on LCD during splash screen
+#define VERSION "FW: 0.25x"		//this is what prints on LCD during splash screen
 #define BUILD_DATE __DATE__		//Build date, 11 char long
 
 //Define this to allow command out serial port, else hardware serial is debug log
-//#define CMD_SERIAL_PORT
+#define CMD_SERIAL_PORT
 
 #define SERIAL_BAUD (115200) //baud rate for the serial ports
-#define F_CPU (48000000UL)
 
+#ifndef F_CPU
+#define F_CPU (48000000UL)
+#endif
 
 /* TODO are flaged with TODO
  *   TODO - add detection of magnet to make sure PCB is on motor
@@ -118,6 +120,10 @@
  *	0.20 - Fixed bug in calibration, thanks to Oliver E.
  *	0.21 - Fixed issues compiling for mechaduino, including disabling LCD for MEchaduino
  *	0.22 - Added home command
+ *	0.23 -- added motor voltage sense to remove stepping on power up
+ *	0.24 - Disabled the home command which used the enable pin if you do not have enable pin
+ *	0.25 - Added pin read command
+ *
  */
 
 
@@ -161,9 +167,9 @@ typedef enum {
 
 //mechaduio and Arduino Zero has defined serial ports differently than NZS
 #ifdef MECHADUINO_HARDWARE
- #warning "Compiling source for Mechaduino NOT NZS"
- #define DISABLE_LCD
- #define Serial5 Serial 
+#warning "Compiling source for Mechaduino NOT NZS"
+#define DISABLE_LCD
+#define Serial5 Serial 
 #else
  #define SerialUSB Serial
 #endif 
@@ -194,6 +200,10 @@ typedef enum {
  #define PIN_SW3		(14)	//analogInputToDigitalPin(PIN_A0))
  #define PIN_SW4		(15)	//analogInputToDigitalPin(PIN_A1))
  #define PIN_ERROR		(10)
+#endif
+
+#ifdef A5995_DRIVER
+#define PIN_ENABLE	(3)
 #endif
 
 #ifdef A5995_DRIVER
@@ -307,6 +317,8 @@ static void boardSetupPins(void)
 	digitalWrite(PIN_AS5047D_PWR,HIGH);
 #endif
 
+
+
 	pinMode(PIN_MOSI,OUTPUT);
 	digitalWrite(PIN_MOSI,LOW);
 	pinMode(PIN_SCK,OUTPUT);
@@ -336,6 +348,18 @@ static void boardSetupPins(void)
 	digitalWrite(PIN_YELLOW_LED,HIGH);
 #endif
 }
+
+#ifdef NEMA17_SMART_STEPPER_3_21_2017
+static float GetMotorVoltage(void)
+{
+	uint32_t x;
+	float f;
+	//the motor voltage is 1/101 of the adc
+	x=analogRead(PIN_VMOTOR);  //this should be a 10bit value mapped to 3.3V
+	f=(float)x*3.3/1024.0*101.0;
+	return f;
+}
+#endif
 
 static void inline YELLOW_LED(bool state)
 {

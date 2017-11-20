@@ -572,7 +572,7 @@ void NZS::begin(void)
 	{
 		eepromRead((uint8_t *)&PowerupEEPROM, sizeof(PowerupEEPROM));
 	}
-
+#ifndef DISABLE_LCD
 	configure_bod();		//configure the BOD
 
 //#ifndef DISABLE_LCD
@@ -580,6 +580,7 @@ void NZS::begin(void)
 	Lcd.begin(&stepperCtrl);
 	Lcd.showSplash();
 //#endif
+#endif
 
 	LOG("command init!");
 	commandsInit(); //setup command handler system
