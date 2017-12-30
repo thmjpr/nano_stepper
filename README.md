@@ -10,6 +10,10 @@ Main changes are:
 - Error out open collector
 
 
+# Photos
+![board](https://user-images.githubusercontent.com/3468997/34456704-38d03188-ed52-11e7-9c1e-ecdd5b01cb7f.jpg)
+![board2](https://user-images.githubusercontent.com/3468997/34456705-3de08fe2-ed52-11e7-836f-439ced3b7447.jpg)
+
 # Smart Stepper (also known as the nano zero stepper)
 Firmware to turn a stepper motor into servo motor: see http://misfittech.net for hardware! 
 
