@@ -19,7 +19,7 @@
 #include <Wire.h>
 
 #ifndef DISABLE_LCD
-void NZS_LCD::begin(StepperCtrl *ptrsCtrl)
+void LCD::begin(StepperCtrl *ptrsCtrl)
 {
 #ifndef MECHADUINO_HARDWARE
 	pinMode(PIN_SW1, INPUT_PULLUP);
@@ -68,7 +68,7 @@ void NZS_LCD::begin(StepperCtrl *ptrsCtrl)
 }
 
 
-void __attribute__ ((optimize("Ofast"))) NZS_LCD::lcdShow(const char *line1, const char *line2,const char *line3)
+void __attribute__ ((optimize("Ofast"))) LCD::lcdShow(const char *line1, const char *line2,const char *line3)
 {
 
 	if (false == displayEnabled)
@@ -88,13 +88,18 @@ void __attribute__ ((optimize("Ofast"))) NZS_LCD::lcdShow(const char *line1, con
 
 }
 
+<<<<<<< HEAD
 //Logo splash screen
 void NZS_LCD::showSplash(void)
+=======
+void LCD::showSplash(void)
+>>>>>>> 5c4fd1bcf080d8b54497ce33e1f1b736a181eeae
 {
 	if (false == displayEnabled)
 	{
 		return;
 	}
+<<<<<<< HEAD
 	display.clearDisplay();
 	display.drawBitmap(0, 0, icon_splash_screen, 128, 64, WHITE); //Show logo
 	display.setCursor(60, 55);
@@ -106,6 +111,17 @@ void NZS_LCD::showSplash(void)
 
 //
 void NZS_LCD::setMenu(menuItem_t *pMenu)
+=======
+#ifdef A5995_DRIVER
+	lcdShow("MisfitTech","NEMA 23", VERSION);
+#else
+	lcdShow("MisfitTech","NEMA 17", VERSION);
+#endif
+}
+
+
+void LCD::setMenu(menuItem_t *pMenu)
+>>>>>>> 5c4fd1bcf080d8b54497ce33e1f1b736a181eeae
 {
 	if (false == displayEnabled)
 	{
@@ -115,8 +131,13 @@ void NZS_LCD::setMenu(menuItem_t *pMenu)
 	menuIndex = 0;
 }
 
+<<<<<<< HEAD
 //Show configuration options
 void NZS_LCD::showOptions(void)
+=======
+
+void LCD::showOptions(void)
+>>>>>>> 5c4fd1bcf080d8b54497ce33e1f1b736a181eeae
 {
 	int32_t i,j;
 	char str[3][26] = {0};
@@ -147,7 +168,7 @@ void NZS_LCD::showOptions(void)
 }
 
 
-void __attribute__ ((optimize("Ofast"))) NZS_LCD::showMenu(void)
+void __attribute__ ((optimize("Ofast"))) LCD::showMenu(void)
 {
 	int32_t i,j;
 	char str[3][26] = {0};
@@ -188,7 +209,7 @@ void __attribute__ ((optimize("Ofast"))) NZS_LCD::showMenu(void)
 }
 
 
-void __attribute__ ((optimize("Ofast"))) NZS_LCD::updateMenu(void)
+void __attribute__ ((optimize("Ofast"))) LCD::updateMenu(void)
 {
 	if (false == displayEnabled)
 	{
@@ -280,12 +301,12 @@ void __attribute__ ((optimize("Ofast"))) NZS_LCD::updateMenu(void)
 	}
 }
 
-void NZS_LCD::forceMenuActive(void)
+void LCD::forceMenuActive(void)
 {
 	menuActive = true;
 }
 
-void __attribute__((optimize("Ofast")))NZS_LCD::process(void)
+void __attribute__((optimize("Ofast")))LCD::process(void)
 {
 	if (false == displayEnabled)
 	{
@@ -448,7 +469,7 @@ void StepperCtrl::menu(void)
 
  */
 
-void NZS_LCD::updateLCD(void)
+void LCD::updateLCD(void)
 {
 	if (false == displayEnabled)
 	{

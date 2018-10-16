@@ -124,10 +124,16 @@ class StepperCtrl
 		int64_t getDesiredLocation(void);
 		void updateLocTable(int64_t desiredLoc, int64_t currentLoc, Control_t *ptrCtrl);
 		int64_t calculatePhasePrediction(int64_t currentLoc);
+		bool determineError(int64_t currentLoc, int64_t error);
 
 	public:
 		uint16_t getStartupEncoder(void) {return startUpEncoder;}
 		int32_t getLocation(Location_t *ptrLoc);
+<<<<<<< HEAD
+=======
+
+		//int32_t getSteps(void);
+>>>>>>> 5c4fd1bcf080d8b54497ce33e1f1b736a181eeae
 		Angle getEncoderAngle(void);
 		void setAngle(int64_t loc);
 		int64_t getZeroAngleOffset(void);
@@ -154,6 +160,7 @@ class StepperCtrl
 
 		feedbackCtrl_t getControlMode(void) { return systemParams.controllerMode;};
 
+		void updateSteps(int64_t steps);
 		void requestStep(int dir, uint16_t steps); //requests a step, if feedback controller is off motor does not move
 
 		void feedback(bool enable);

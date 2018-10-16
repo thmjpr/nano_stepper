@@ -4,17 +4,19 @@
 #include "stepper_controller.h"
 #include <stdlib.h>
 #include "nonvolatile.h"
-#include "Reset.h"
+#include "reset.h"
 #include "nzs.h"
 #include "ftoa.h"
 #include "board.h"
 #include "eeprom.h"
+#include "steppin.h"
 
 extern int32_t dataEnabled;
 
 #define COMMANDS_PROMPT (":>")
 sCmdUart UsbUart;
 sCmdUart SerialUart;
+sCmdUart HostUart; //uart on the step/dir pins
 
 static int isPowerOfTwo (unsigned int x)
 {
@@ -51,6 +53,7 @@ CMD_STR(errorlimit, "gets/set the error limit which will assert error pin (when 
 CMD_STR(ctrlmode, "gets/set the feedback controller mode of operation");
 CMD_STR(maxcurrent, "gets/set the maximum motor current allowed in milliAmps");
 CMD_STR(holdcurrent, "gets/set the motor holding current in milliAmps, only used in the simple positional PID mode");
+CMD_STR(homecurrent, "gets/set the motor moving and holding currents that will be used when pin A3 is low");
 CMD_STR(motorwiring, "gets/set the motor wiring direction, should only be used by experts");
 CMD_STR(stepsperrotation, "gets/set the motor steps per rotation, should only be used by experts");
 
@@ -70,12 +73,17 @@ CMD_STR(eepromloc, "returns location in degreees eeprom on power up");
 CMD_STR(eepromwrite, "forces write of location to eeprom");
 CMD_STR(eepromsetloc, "sets the device angle based on EEPROM last reading, compenstates for error")
 CMD_STR(setpos, "sets the current angle in degrees");
-CMD_STR(reboot, "reboots the unit")
+CMD_STR(reboot, "reboots the unit");
+CMD_STR(homepin, "sets the pin used to drop to homing current");
+CMD_STR(homeangledelay, "sets the angle delay in dropping to homing current");
 #ifdef PIN_ENABLE
 CMD_STR(home, "moves the motor until home switch (enable pin) is pulled low. example 'home 360 0.5' move up to 360 degrees at 0.5 RPM ")
 #endif
 CMD_STR(pinread, "reads pins as binary (bit 0-step, bit 1 - Dir, bit 2 - Enable, bit 3 - Error, bit 4 - A3, bit 5- TX, bit 6 - RX")
-
+CMD_STR(errorpin, "Sets the logic level of error pin")
+CMD_STR(geterror, "gets current error")
+CMD_STR(getsteps, "returns number of steps seen")
+CMD_STR(debug, "enables debug commands out USB")
 //List of supported commands
 sCommand Cmds[] =
 {
@@ -103,6 +111,7 @@ sCommand Cmds[] =
 		COMMAND(ctrlmode),
 		COMMAND(maxcurrent),
 		COMMAND(holdcurrent),
+		COMMAND(homecurrent),
 		COMMAND(motorwiring),
 		COMMAND(stepsperrotation),
 
@@ -123,12 +132,66 @@ sCommand Cmds[] =
 		COMMAND(setpos),
 		COMMAND(reboot),
 		COMMAND(eepromsetloc),
+		COMMAND(homepin),
+		COMMAND(homeangledelay),
 #ifdef PIN_ENABLE
 		COMMAND(home),
 #endif
 		COMMAND(pinread),
+		COMMAND(errorpin),
+		COMMAND(geterror),
+		COMMAND(getsteps),
+		COMMAND(debug),
 		{"",0,""}, //End of list signal
 };
+
+static int debug_cmd(sCmdUart *ptrUart,int argc, char * argv[])
+{
+	uint32_t i;
+	if (argc>=1)
+	{
+		i=atol(argv[0]);
+		SysLogDebug(i);
+	}
+}
+
+static int getsteps_cmd(sCmdUart *ptrUart,int argc, char * argv[])
+{
+	int32_t s;
+	s=(int32_t)getSteps();
+//	s=(int32_t)stepperCtrl.getSteps();
+	CommandPrintf(ptrUart,"steps %" PRIi32 "\n\r",s);
+	return 0;
+}
+static int geterror_cmd(sCmdUart *ptrUart,int argc, char * argv[])
+{
+	float f;
+	char str[30];
+	f=ANGLE_T0_DEGREES(stepperCtrl.getLoopError());
+	ftoa(f,str,2,'f');
+	CommandPrintf(ptrUart,"error %s deg",str);
+	return 0;
+}
+
+
+static int errorpin_cmd(sCmdUart *ptrUart,int argc, char * argv[])
+{
+	if (argc==1)
+	{
+
+		SystemParams_t params;
+
+		memcpy(&params,&NVM->SystemParams, sizeof(SystemParams_t) );
+		params.errorLogic=atol(argv[0]);
+
+		nvmWriteSystemParms(params);
+		stepperCtrl.updateParamsFromNVM();
+
+	}
+	CommandPrintf(ptrUart,"error pin assert level is %d\n\r",NVM->SystemParams.errorLogic);
+	return 0;
+
+}
 
 static int pinread_cmd(sCmdUart *ptrUart,int argc, char * argv[])
 {
@@ -152,7 +215,7 @@ static int pinread_cmd(sCmdUart *ptrUart,int argc, char * argv[])
 	{
 		ret |= 0x08;
 	}
-	if (digitalRead(analogInputToDigitalPin(PIN_A3)))
+	if (digitalRead(PIN_A3))
 	{
 		ret |= 0x10;
 	}
@@ -164,7 +227,7 @@ static int pinread_cmd(sCmdUart *ptrUart,int argc, char * argv[])
 	{
 		ret |= 0x40;
 	}
-	CommandPrintf(ptrUart,"%02X\n\r",ret);
+	CommandPrintf(ptrUart,"0x%02X\n\r",ret);
 	return 0;
 }
 
@@ -173,6 +236,9 @@ static void errorPinISR(void)
 {
 	SmartPlanner.stop(); //stop the planner
 }
+
+
+
 
 static int home_cmd(sCmdUart *ptrUart,int argc, char * argv[])
 {
@@ -278,8 +344,15 @@ static int eepromsetloc_cmd(sCmdUart *ptrUart,int argc, char * argv[])
 	int64_t deg;
 	int32_t x;
 
+<<<<<<< HEAD
 	x = (uint32_t)PowerupEEPROM.encoderAngle-(uint32_t)stepperCtrl.getEncoderAngle();
 	deg = PowerupEEPROM.angle+x;
+=======
+	x=(uint32_t)PowerupEEPROM.encoderAngle-(uint32_t)stepperCtrl.getEncoderAngle();
+
+	deg=PowerupEEPROM.angle-x;
+
+>>>>>>> 5c4fd1bcf080d8b54497ce33e1f1b736a181eeae
 	stepperCtrl.setAngle(deg);
 	return 0;
 }
@@ -410,6 +483,123 @@ static int motorwiring_cmd(sCmdUart *ptrUart,int argc, char * argv[])
 	return 1;
 }
 
+
+static int homeangledelay_cmd(sCmdUart *ptrUart,int argc, char * argv[])
+{
+		float f;
+		char str[30];
+
+		if (argc == 1)
+		{
+			f=atof(argv[0]);
+
+			SystemParams_t params;
+
+			memcpy(&params,&NVM->SystemParams, sizeof(SystemParams_t) );
+			params.homeAngleDelay=ANGLE_FROM_DEGREES(f);
+
+			nvmWriteSystemParms(params);
+			stepperCtrl.updateParamsFromNVM();
+
+		}
+
+		f=ANGLE_T0_DEGREES(NVM->SystemParams.homeAngleDelay);
+		ftoa(f,str,2,'f');
+		CommandPrintf(ptrUart,"home angle delay %s\n\r",str);
+		return 0;
+}
+
+static int homepin_cmd(sCmdUart *ptrUart,int argc, char * argv[])
+{
+		int32_t x;
+		if (argc == 0)
+		{
+			x=NVM->SystemParams.homePin;
+			CommandPrintf(ptrUart,"home pin %d\n\r",x);
+			return 0;
+		}
+
+		if (argc == 1)
+		{
+			x=atol(argv[0]);
+
+			SystemParams_t params;
+
+			memcpy(&params,&NVM->SystemParams, sizeof(SystemParams_t) );
+			params.homePin=x;
+
+			nvmWriteSystemParms(params);
+			stepperCtrl.updateParamsFromNVM();
+
+
+			x=NVM->SystemParams.homePin;
+			CommandPrintf(ptrUart,"home pin %d\n\r",x);
+			return 0;
+
+		}
+
+		CommandPrintf(ptrUart, "use 'sethomepin 17' to set maximum home pin to A3");
+
+		return 1;
+}
+
+
+static int homecurrent_cmd(sCmdUart *ptrUart,int argc, char * argv[])
+{
+	uint32_t x,y;
+	if (argc == 0)
+	{
+		x=NVM->motorParams.homeMa;
+		y=NVM->motorParams.homeHoldMa;
+		CommandPrintf(ptrUart,"current %umA, %umA\n\r",x,y);
+		return 0;
+	}
+
+	if (argc == 1)
+	{
+		x=atol(argv[0]);
+
+		MotorParams_t motorParams;
+
+		memcpy(&motorParams,&NVM->motorParams, sizeof(motorParams) );
+		motorParams.homeMa=x;
+
+		nvmWriteMotorParms(motorParams);
+		stepperCtrl.updateParamsFromNVM();
+
+
+		x=NVM->motorParams.homeMa;
+		y=NVM->motorParams.homeHoldMa;
+		CommandPrintf(ptrUart,"current %umA, %umA\n\r",x,y);
+		return 0;
+
+	}
+	if (argc == 2)
+	{
+		x=atol(argv[0]);
+		y=atol(argv[1]);
+
+		MotorParams_t motorParams;
+
+		memcpy(&motorParams,&NVM->motorParams, sizeof(motorParams) );
+		motorParams.homeMa=x;
+		motorParams.homeHoldMa=y;
+
+		nvmWriteMotorParms(motorParams);
+		stepperCtrl.updateParamsFromNVM();
+
+
+		x=NVM->motorParams.homeMa;
+		y=NVM->motorParams.homeHoldMa;
+		CommandPrintf(ptrUart,"current %umA, %umA\n\r",x,y);
+		return 0;
+
+	}
+	CommandPrintf(ptrUart, "use 'homecurrent 1000 500' to set maximum home current to 1.0A and hold to 500ma");
+
+	return 1;
+}
+
 static int holdcurrent_cmd(sCmdUart *ptrUart,int argc, char * argv[])
 {
    if (argc == 0)
@@ -473,6 +663,7 @@ static int maxcurrent_cmd(sCmdUart *ptrUart,int argc, char * argv[])
 
 	return 1;
 }
+
 
 
 static int ctrlmode_cmd(sCmdUart *ptrUart,int argc, char * argv[])
@@ -1274,9 +1465,28 @@ uint8_t putch_hw(char data)
 	return Serial5.write((uint8_t)data);
 }
 
+
+uint8_t kbhit_step_dir(void)
+{
+	return Serial1.available();
+	//return SerialUSB.peek() != -1;
+}
+uint8_t getChar_step_dir(void)
+{
+	return Serial1.read();
+}
+uint8_t putch_step_dir(char data)
+{
+	return Serial1.write((uint8_t)data);
+}
+
+
+
 void commandsInit(void)
 {
 	CommandInit(&UsbUart, kbhit, getChar, putch ,NULL); //set up the UART structure
+
+	CommandInit(&HostUart, kbhit_step_dir, getChar_step_dir, putch_step_dir ,NULL); //set up the UART structure for step and dir pins
 
 #ifdef CMD_SERIAL_PORT
 	CommandInit(&SerialUart, kbhit_hw, getChar_hw, putch_hw ,NULL); //set up the UART structure
@@ -1290,6 +1500,17 @@ void commandsInit(void)
 
 int commandsProcess(void)
 {
+#ifdef USE_STEP_DIR_SERIAL
+	//if the step pin is configured to the SerialCom 0 then we need to process commands
+	//if PA11 (D0) is configured to perpherial C then the step pin is UART
+	if (getPinMux(PIN_STEP_INPUT) ==  PORT_PMUX_PMUXE_C_Val)
+	{
+		//SerialUSB.println("host");
+		CommandProcess(&HostUart,Cmds,' ',COMMANDS_PROMPT);
+	}
+#endif //USE_STEP_DIR_SERIAL
+
+
 #ifdef CMD_SERIAL_PORT
 	CommandProcess(&SerialUart,Cmds,' ',COMMANDS_PROMPT);
 #endif

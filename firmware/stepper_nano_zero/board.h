@@ -30,8 +30,20 @@
 //#define NEMA17_SMART_STEPPER_3_21_2017
 #define NZ_STEPPER_2017
 
+<<<<<<< HEAD
 #define NZS_FAST_CAL	// define this to use 32k of flash for fast calibration table
 #define NZS_FAST_SINE	//uses 2048 extra bytes to implement faster sine tables
+=======
+
+#ifdef A5995_DRIVER
+#ifdef NEMA17_SMART_STEPPER_3_21_2017
+#error "Only NEMA17_SMART_STEPPER_3_21_2017 or A5595_DRIVER may be defined"
+#endif
+#endif
+
+#define NZS_FAST_CAL // define this to use 32k of flash for fast calibration table
+#define NZS_FAST_SINE //uses 2048 extra bytes to implement faster sine tables
+>>>>>>> 5c4fd1bcf080d8b54497ce33e1f1b736a181eeae
 
 #define NZS_AS5047_PIPELINE	//does a pipeline read of encoder, which is slightly faster
 
@@ -39,18 +51,32 @@
 
 
 #define NZS_LCD_ABSOULTE_ANGLE  //define this to show angle from zero in positive and negative direction
-								// for example 2 rotations from start will be angle of 720 degrees
+// for example 2 rotations from start will be angle of 720 degrees
 
 //#define ENABLE_PHASE_PREDICTION //this enables prediction of phase at high velocity to increase motor speed
-								//as of FW0.11 it is considered development only
+//as of FW0.11 it is considered development only
 
+<<<<<<< HEAD
 #define VERSION "FW: 0.25x"		//this is what prints on LCD during splash screen
 #define BUILD_DATE __DATE__		//Build date, 11 char long
+=======
+#define VERSION "FW: 0.37" //this is what prints on LCD during splash screen
+>>>>>>> 5c4fd1bcf080d8b54497ce33e1f1b736a181eeae
 
 //Define this to allow command out serial port, else hardware serial is debug log
-#define CMD_SERIAL_PORT
+//#define CMD_SERIAL_PORT
 
 #define SERIAL_BAUD (115200) //baud rate for the serial ports
+
+//This section is for using the step and dir pins as serial port
+// when the enable pin is inactive.
+#define USE_STEP_DIR_SERIAL
+#define STEP_DIR_BAUD (19200) //this is the baud rate we will use
+
+// These are used as an attempt to use TC4 to count steps
+//  currently this is not working.
+//#define USE_NEW_STEP //define this to use new step method
+#define USE_TC_STEP //use timer counter for step pin
 
 #ifndef F_CPU
 #define F_CPU (48000000UL)
@@ -123,7 +149,21 @@
  *	0.23 -- added motor voltage sense to remove stepping on power up
  *	0.24 - Disabled the home command which used the enable pin if you do not have enable pin
  *	0.25 - Added pin read command
- *
+ *  0.26 - changed the step/dir pins to be input_pullups
+ *  0.27 - added the option to make the step/dir uart when enable is low.
+ *  	 - fixed enable to line to disable the A4954 driver
+ *  0.28 - Enabled some homing options (still under development)
+ *  0.29  - fixed rounding bug in ANGLE_T0_DEGREES
+ *  0.30  - Added support for the AS5048A encoder
+ *  0.31  - Added reading enable pin on during main loop
+ *  0.32  - Fixed issue where steps were not being counted correctly
+ *  0.33  - changed sPID parameters back to 0.9 0.0001 0.01
+ *  0.34  - Added board type to the splash screen
+ *  0.35 - fixed usign TC4 (USE_TC_STEP) for counting steps. We can measure steps
+ *       - at over 125khz, however the dir pin has ~8us setup time due to interrupt latency.
+ *       - Added debug command to allow debug messages out the USB serial port
+ *  0.36 - eeprom set location math was wrong.
+ *  0.37 - fixed bug where the motor would pause periodically do the the TC4 counter.
  */
 
 
@@ -150,20 +190,23 @@ typedef enum {
 	CTRL_POS_VELOCITY_PID = 4, 				//PID  Velocity controller
 } feedbackCtrl_t;
 
+// ******** EVENT SYS USAGAE ************
+// Channel 0 - Step pin event
 
 // ******** TIMER USAGE A4954 versions ************
 //TCC1 is used for DAC PWM to the A4954
 //TCC0 can be used as PWM for the input pins on the A4954
 //D0 step input could use TCC1 or TCC0 if not used
-//TC5 is use for timing the control loop
 //TC3 is used for planner tick
+//TC4 is used for step count
+//TC5 is use for timing the control loop
 
 // ******** TIMER USAGE NEMA23 10A versions ************
 //TCC0 PWM for the FET IN pins
 //D10 step input could use TC3 or TCC0 if not used
-//TC5 is use for timing the control loop
 //TC3 is used for planner tick
-
+//TC4 is used for step count
+//TC5 is use for timing the control loop
 
 //mechaduio and Arduino Zero has defined serial ports differently than NZS
 #ifdef MECHADUINO_HARDWARE
@@ -182,6 +225,7 @@ typedef enum {
 #define PIN_MISO        (22)	//
 
 #ifdef MECHADUINO_HARDWARE
+<<<<<<< HEAD
  #define PIN_ERROR 		(19)  //analogInputToDigitalPin(PIN_A5))
 #elif defined NEMA17_SMART_STEPPER_3_21_2017
  #define PIN_SW1		(19)	//analogInputToDigitalPin(PIN_A5))
@@ -204,6 +248,28 @@ typedef enum {
  #define PIN_SW3		(14)	//analogInputToDigitalPin(PIN_A0))
  #define PIN_SW4		(15)	//analogInputToDigitalPin(PIN_A1))
  #define PIN_ERROR		(10)
+=======
+#ifdef USE_STEP_DIR_SERIAL
+#error "Step/Dir UART not supported on Mechaduino yet"
+#endif
+
+#define PIN_ERROR 		(19)  //analogInputToDigitalPin(PIN_A5))
+#else //not Mechaduino hardware
+#ifdef NEMA17_SMART_STEPPER_3_21_2017
+#define PIN_SW1		(19)//analogInputToDigitalPin(PIN_A5))
+#define PIN_SW3		(14)//analogInputToDigitalPin(PIN_A0))
+#define PIN_SW4		(2)//D2
+#define PIN_ENABLE	(10)
+#define PIN_ERROR	(3)
+
+#define PIN_VMOTOR (A1) //analog pin for the motor
+
+#else
+#define PIN_SW1		(19)//analogInputToDigitalPin(PIN_A5))
+#define PIN_SW3		(14)//analogInputToDigitalPin(PIN_A0))
+#define PIN_SW4		(15)//analogInputToDigitalPin(PIN_A1))
+#define PIN_ERROR		(10)
+>>>>>>> 5c4fd1bcf080d8b54497ce33e1f1b736a181eeae
 #endif
 
 #ifdef A5995_DRIVER
@@ -298,6 +364,7 @@ static void boardSetupPins(void)
 	pinMode(PIN_SW4, INPUT_PULLUP);
 #endif
 
+<<<<<<< HEAD
 #ifdef NZ_STEPPER_2017
   pinMode(PIN_STEP_INPUT, INPUT_PULLDOWN);
   pinMode(PIN_DIR_INPUT, INPUT_PULLDOWN);
@@ -306,6 +373,10 @@ static void boardSetupPins(void)
 	pinMode(PIN_DIR_INPUT, INPUT);
 #endif
 
+=======
+	pinMode(PIN_STEP_INPUT, INPUT_PULLUP);
+	pinMode(PIN_DIR_INPUT, INPUT_PULLUP);
+>>>>>>> 5c4fd1bcf080d8b54497ce33e1f1b736a181eeae
 
 #ifdef PIN_ENABLE
 	pinMode(PIN_ENABLE, INPUT_PULLUP); //default error pin as enable pin with pull up
@@ -385,28 +456,95 @@ static void inline RED_LED(bool state)
 
 #define NVIC_IS_IRQ_ENABLED(x) (NVIC->ISER[0] & (1 << ((uint32_t)(x) & 0x1F)))!=0
 
+static inline uint8_t  getPinMux(uint16_t ulPin)
+{
+	uint8_t temp;
+	if ((ulPin & 0x01)==0)
+	{
+		temp = (PORT->Group[g_APinDescription[ulPin].ulPort].PMUX[g_APinDescription[ulPin].ulPin >> 1].reg) & PORT_PMUX_PMUXE( 0xF ) ;
+	}else
+	{
+		temp = (PORT->Group[g_APinDescription[ulPin].ulPort].PMUX[g_APinDescription[ulPin].ulPin >> 1].reg)>>4 & 0xF;
+	}
+	return temp;
+}
+
+
+static inline uint8_t  getPinCfg(uint16_t ulPin)
+{
+	uint8_t temp;
+
+	temp = PORT->Group[g_APinDescription[ulPin].ulPort].PINCFG[g_APinDescription[ulPin].ulPin].reg;
+	return temp;
+}
+
+static inline void  setPinCfg(uint16_t ulPin, uint8_t val)
+{
+	PORT->Group[g_APinDescription[ulPin].ulPort].PINCFG[g_APinDescription[ulPin].ulPin].reg=val;
+}
+
+
+
+static inline void  setPinMux(uint16_t ulPin, uint8_t val)
+{
+	uint8_t temp;
+	temp = (PORT->Group[g_APinDescription[ulPin].ulPort].PMUX[g_APinDescription[ulPin].ulPin >> 1].reg);
+	if ((ulPin & 0x01)==0)
+	{
+		//if an even pin
+		temp =  (temp & 0xF0) | (val & 0x0F);
+	}else
+	{
+		temp =  (temp & 0x0F) | ((val<<4) & 0x0F);
+	}
+	PORT->Group[g_APinDescription[ulPin].ulPort].PMUX[g_APinDescription[ulPin].ulPin >> 1].reg=temp;
+	PORT->Group[g_APinDescription[ulPin].ulPort].PINCFG[g_APinDescription[ulPin].ulPin].reg |= PORT_PINCFG_PMUXEN ; // Enable port mux
+}
 
 static inline void SET_PIN_PERHERIAL(uint16_t ulPin,EPioType ulPeripheral)
 {
-	 if ( g_APinDescription[ulPin].ulPin & 1 ) // is pin odd?
-      {
-        uint32_t temp ;
+	if ( g_APinDescription[ulPin].ulPin & 1 ) // is pin odd?
+	{
+		uint32_t temp ;
 
-        // Get whole current setup for both odd and even pins and remove odd one
-        temp = (PORT->Group[g_APinDescription[ulPin].ulPort].PMUX[g_APinDescription[ulPin].ulPin >> 1].reg) & PORT_PMUX_PMUXE( 0xF ) ;
-        // Set new muxing
-        PORT->Group[g_APinDescription[ulPin].ulPort].PMUX[g_APinDescription[ulPin].ulPin >> 1].reg = temp|PORT_PMUX_PMUXO( ulPeripheral ) ;
-        // Enable port mux
-        PORT->Group[g_APinDescription[ulPin].ulPort].PINCFG[g_APinDescription[ulPin].ulPin].reg |= PORT_PINCFG_PMUXEN ;
-      }
-      else // even pin
-      {
-        uint32_t temp ;
+		// Get whole current setup for both odd and even pins and remove odd one
+		temp = (PORT->Group[g_APinDescription[ulPin].ulPort].PMUX[g_APinDescription[ulPin].ulPin >> 1].reg) & PORT_PMUX_PMUXE( 0xF ) ;
+		// Set new muxing
+		PORT->Group[g_APinDescription[ulPin].ulPort].PMUX[g_APinDescription[ulPin].ulPin >> 1].reg = temp|PORT_PMUX_PMUXO( ulPeripheral ) ;
+		// Enable port mux
+		PORT->Group[g_APinDescription[ulPin].ulPort].PINCFG[g_APinDescription[ulPin].ulPin].reg |= PORT_PINCFG_PMUXEN ;
+	}
+	else // even pin
+	{
+		uint32_t temp ;
 
-        temp = (PORT->Group[g_APinDescription[ulPin].ulPort].PMUX[g_APinDescription[ulPin].ulPin >> 1].reg) & PORT_PMUX_PMUXO( 0xF ) ;
-        PORT->Group[g_APinDescription[ulPin].ulPort].PMUX[g_APinDescription[ulPin].ulPin >> 1].reg = temp|PORT_PMUX_PMUXE( ulPeripheral ) ;
-        PORT->Group[g_APinDescription[ulPin].ulPort].PINCFG[g_APinDescription[ulPin].ulPin].reg |= PORT_PINCFG_PMUXEN ; // Enable port mux
-      }
+		temp = (PORT->Group[g_APinDescription[ulPin].ulPort].PMUX[g_APinDescription[ulPin].ulPin >> 1].reg) & PORT_PMUX_PMUXO( 0xF ) ;
+		PORT->Group[g_APinDescription[ulPin].ulPort].PMUX[g_APinDescription[ulPin].ulPin >> 1].reg = temp|PORT_PMUX_PMUXE( ulPeripheral ) ;
+		PORT->Group[g_APinDescription[ulPin].ulPort].PINCFG[g_APinDescription[ulPin].ulPin].reg |= PORT_PINCFG_PMUXEN ; // Enable port mux
+	}
+}
+
+
+//the Arduino delay function requires interrupts to work.
+// if interrupts are disabled use the delayMicroseconds which is a spin loop
+static inline void DelayMs(uint32_t ms)
+{
+	uint32_t prim;
+	/* Read PRIMASK register, check interrupt status before you disable them */
+	/* Returns 0 if they are enabled, or non-zero if disabled */
+	prim = __get_PRIMASK();
+
+	if (prim==0)
+	{
+		delay(ms);
+	}else
+	{
+		while(ms)
+		{
+			delayMicroseconds(1000);
+			ms--;
+		}
+	}
 }
 
 #endif//__BOARD_H__
