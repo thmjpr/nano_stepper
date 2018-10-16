@@ -743,26 +743,22 @@ static uint32_t ADCStart(uint32_t ulPin)
 	syncADC();
 	ADC->SWTRIG.bit.START = 1;
 
-	return 0;//valueRead; //mapResolution(valueRead, _ADCResolution, _readResolution);
+	return 0;	//valueRead; //mapResolution(valueRead, _ADCResolution, _readResolution);
 }
 void ADC_Handler(void)
 {
-
 	uint16_t channel;
 	uint16_t value;
 	static uint16_t lastChannel=0;
 
-	//static int state=0;
-	YELLOW_LED(1);
-	//state=(state+1)&0x01;
-
-	value=ADC->RESULT.reg;
-	channel=ADC->INPUTCTRL.bit.MUXPOS;// + ADC->INPUTCTRL.bit.INPUTOFFSET;
+	GREEN_LED(1);
+	value = ADC->RESULT.reg;
+	channel = ADC->INPUTCTRL.bit.MUXPOS;	// + ADC->INPUTCTRL.bit.INPUTOFFSET;
 
 	//LOG("channel is %d %d", lastChannel,value);
 
 	FetDriver::ADC_Callback(lastChannel,value);
-	lastChannel=channel;
+	lastChannel = channel;
 
 	if (channel == g_APinDescription[ISENSE_FET_B].ulADCChannelNumber)
 	{
@@ -779,25 +775,22 @@ void ADC_Handler(void)
 	ADC->INTFLAG.bit.RESRDY = 1;
 	//syncADC();
 	ADC->SWTRIG.bit.START = 1;
-	YELLOW_LED(0);
+	GREEN_LED(0);
 	//state=(state+1)&0x01;
-
 }
 
-
-
+//
 void FetDriver::ADC_Callback(uint16_t channel, uint16_t value)
 {
-
 	//ptrInstance->begin();
 	if (ptrInstance==NULL)
 	{
 		return;
 	}
 	ptrInstance->ctrl_update(channel,value);
-
 }
 
+//
 void FetDriver::ctrl_update(uint16_t channel, uint16_t value)
 {
 	int32_t x,error;
@@ -806,14 +799,14 @@ void FetDriver::ctrl_update(uint16_t channel, uint16_t value)
 	{
 		static int32_t iterm;
 
-		x=value-coilA_Zero;
-		error=coilA_SetPoint-x;
-		coilA_error=x;
-		iterm+=error;
+		x = value - coilA_Zero;
+		error = coilA_SetPoint - x;
+		coilA_error = x;
+		iterm += error;
 
-		x=error*15;//+iterm/10;
-		x=x/1024;
-		coilA_value+=x;
+		x = error*15;	//+iterm/10;
+		x = x/1024;
+		coilA_value += x;
 
 //		if (error>0)
 //			coilA_value++;
@@ -835,14 +828,14 @@ void FetDriver::ctrl_update(uint16_t channel, uint16_t value)
 	if (channel ==  g_APinDescription[ISENSE_FET_B].ulADCChannelNumber)
 	{
 		static int32_t itermB;
-		x=value-coilB_Zero;
-		error=coilB_SetPoint-x;
-		coilB_error=error;
+		x = value - coilB_Zero;
+		error = coilB_SetPoint - x;
+		coilB_error = error;
 
 
-		x=error*15+itermB/10;
-		x=x/1024;
-		coilB_value+=x;
+		x = error*15 + itermB/10;
+		x = x/1024;
+		coilB_value += x;
 
 		//coilB_PWM(coilB_value);
 //		if (error>0)
@@ -857,17 +850,17 @@ void FetDriver::ctrl_update(uint16_t channel, uint16_t value)
 	return;
 
 	//LOG("channel is %d %d", channel,value);
-	if (channel ==  g_APinDescription[ISENSE_FET_B].ulADCChannelNumber)
+	if (channel == g_APinDescription[ISENSE_FET_B].ulADCChannelNumber)
 	{
-		static int32_t ib=0;
-		static int32_t meanb=0;
+		static int32_t ib = 0;
+		static int32_t meanb = 0;
 		int32_t error,u,de;
-		static int32_t itermb=0;;
-		static int32_t lastErrorb=0;
+		static int32_t itermb = 0;
+		static int32_t lastErrorb = 0;
 
-		adc=value;
-		x=value-coilB_Zero;
-		if (coilB_Zero==-1)
+		adc = value;
+		x = value-coilB_Zero;
+		if (coilB_Zero == -1)
 		{
 			if(ib<FET_DRIVER_NUM_ZERO_AVG)
 			{
@@ -880,15 +873,15 @@ void FetDriver::ctrl_update(uint16_t channel, uint16_t value)
 			return;
 		}
 
-		error=coilB_SetPoint-x;
+		error = coilB_SetPoint-x;
 
 		//		if (error>0)
 		//			u=1;
 		//		else
 		//			u=-1;
 
-		de=error-lastErrorb;
-		lastErrorb=error;
+		de = error-lastErrorb;
+		lastErrorb = error;
 
 		if (ABS(error)<50)
 		{
@@ -897,8 +890,8 @@ void FetDriver::ctrl_update(uint16_t channel, uint16_t value)
 		{
 			itermb=0;
 		}
-		u=error*320 + itermb +100*de;
-		u=u/16382;
+		u = error*320 + itermb +100*de;
+		u = u/16382;
 		if (u>10) u=10;
 		if (u<-10) u=-10;
 
@@ -912,7 +905,7 @@ void FetDriver::ctrl_update(uint16_t channel, uint16_t value)
 		return;
 	}
 
-	if (channel ==  g_APinDescription[ISENSE_FET_A].ulADCChannelNumber)
+	if (channel == g_APinDescription[ISENSE_FET_A].ulADCChannelNumber)
 	{
 		static int32_t i=0;
 		static int32_t mean=0;
@@ -921,34 +914,34 @@ void FetDriver::ctrl_update(uint16_t channel, uint16_t value)
 		static int32_t lastError=0;
 
 
-		x=value-coilA_Zero;
+		x = value-coilA_Zero;
 		if (coilA_Zero==-1)
 		{
 			if(i<FET_DRIVER_NUM_ZERO_AVG)
 			{
-				mean=mean+x;
+				mean = mean+x;
 				i++;
 			}else
 			{
-				coilA_Zero=mean/i;
+				coilA_Zero = mean/i;
 			}
 
 			return;
 		}
 
-		error=coilA_SetPoint-x;
-		de=error-lastError;
-		lastError=error;
+		error = coilA_SetPoint-x;
+		de = error-lastError;
+		lastError = error;
 
 		if (ABS(error)<50)
 		{
-			iterm=iterm+1*error;
+			iterm = iterm+1*error;
 		}else
 		{
-			iterm=0;
+			iterm = 0;
 		}
-		u=error*320 + iterm +100*de;
-		u=u/16382;
+		u = error*320 + iterm +100*de;
+		u = u/16382;
 		if (u>10) u=10;
 		if (u<-10) u=-10;
 
@@ -960,61 +953,60 @@ void FetDriver::ctrl_update(uint16_t channel, uint16_t value)
 		coilA_PWM(coilA_value);
 		return;
 	}
-
 }
 
-
+//Measure zero offset current?
 void FetDriver::measureCoilB_zero(void)
 {
-	coilB_Zero=GetMeanAdc(ISENSE_FET_B,FET_DRIVER_NUM_ZERO_AVG);
+	coilB_Zero = GetMeanAdc(ISENSE_FET_B, FET_DRIVER_NUM_ZERO_AVG);
 	LOG("Coil B Zero is %d",coilB_Zero);
 	return;
 }
 
+//
 void FetDriver::measureCoilA_zero(void)
 {
-	coilA_Zero=GetMeanAdc(ISENSE_FET_A,FET_DRIVER_NUM_ZERO_AVG);
+	coilA_Zero = GetMeanAdc(ISENSE_FET_A, FET_DRIVER_NUM_ZERO_AVG);
 	LOG("Coil A Zero is %d",coilA_Zero);
 	return;
 }
 
-
+//
 void FetDriver::CalTableA(int32_t maxMA)
 {
-
-	int16_t table2[512]={0};
-	int32_t pwm=0;
-	int32_t mA=0;
+	int16_t table2[512] = {0};
+	int32_t pwm = 0;
+	int32_t mA = 0;
 	int i;
 
-
-	while (mA>-maxMA)
+	while (mA > -maxMA)
 	{
 		int32_t adc;
 		//LOG("Running %d",pwm);
-		adc=GetMeanAdc(ISENSE_FET_A,10)-coilA_Zero;
+		adc = GetMeanAdc(ISENSE_FET_A,10)-coilA_Zero;
 		//LOG("ADC is %d",adc);
-		mA=FET_ADC_TO_MA(adc);
+		mA = FET_ADC_TO_MA(adc);
 		//LOG("mA is %d, ADC %d",mA,ADC);
-		pwm=pwm-1;
+		pwm -= 1;
 
-		if (coilA_PWM(pwm)==1)
+		if (coilA_PWM(pwm) == 1)
 		{
 			ERROR("CoilA PWM maxed");
 			break;
 		}
-		//delay(5);
+		
 	}
 
 	//LOG("First PWM is %d %d",pwm, mA);
-	PWM_Table_A[0]=pwm;
-	table2[0]=mA;
-	i=1;
+	PWM_Table_A[0] = pwm;
+	table2[0] = mA;
+	i = 1;
+	
 	while (i<512)
 	{
 		int32_t adc;
-		adc=GetMeanAdc(ISENSE_FET_A,10)-coilA_Zero;
-		mA=FET_ADC_TO_MA(adc);
+		adc = GetMeanAdc(ISENSE_FET_A,10)-coilA_Zero;
+		mA = FET_ADC_TO_MA(adc);
 
 		//LOG("PWM %d, %d %d",i,mA,pwm);
 		if (mA>((i-255)*maxMA/256))
@@ -1024,7 +1016,7 @@ void FetDriver::CalTableA(int32_t maxMA)
 			i++;
 		}else
 		{
-			pwm=pwm+1;
+			pwm = pwm+1;
 			coilA_PWM(pwm);
 			//delay(5);
 		}
@@ -1037,9 +1029,10 @@ void FetDriver::CalTableA(int32_t maxMA)
 		Serial.print(PWM_Table_A[i]);
 		Serial.print(",");
 	}
+	
 	Serial.print("\n\r");
-
 	Serial.print("\n\r");
+	
 	for (i=0; i<512; i++)
 	{
 		Serial.print(table2[i]);
@@ -1048,33 +1041,33 @@ void FetDriver::CalTableA(int32_t maxMA)
 	Serial.print("\n\r");
 }
 
+//
 void FetDriver::CalTableB(int32_t maxMA)
 {
-
-	int16_t table2[512]={0};
-	int32_t pwm=0;
-	int32_t mA=0;
+	int16_t table2[512] = {0};
+	int32_t pwm = 0;
+	int32_t mA = 0;
 	int i;
 
-	while (mA>-maxMA)
+	while (mA >- maxMA)
 	{
 		int32_t adc;
-		adc=GetMeanAdc(ISENSE_FET_B,10)-coilB_Zero;
-		mA=FET_ADC_TO_MA(adc);
-		pwm=pwm-1;
+		adc = GetMeanAdc(ISENSE_FET_B,10)-coilB_Zero;
+		mA = FET_ADC_TO_MA(adc);
+		pwm -= 1;
 		coilB_PWM(pwm);
 		//delay(5);
 	}
 
 	//LOG("First PWM is %d %d",pwm, mA);
-	PWM_Table_B[0]=pwm;
-	table2[0]=mA;
-	i=1;
+	PWM_Table_B[0] = pwm;
+	table2[0] = mA;
+	i = 1;
 	while (i<512)
 	{
 		int32_t adc;
-		adc=GetMeanAdc(ISENSE_FET_B,10)-coilB_Zero;
-		mA=FET_ADC_TO_MA(adc);
+		adc = GetMeanAdc(ISENSE_FET_B,10)-coilB_Zero;
+		mA = FET_ADC_TO_MA(adc);
 
 		//LOG("PWM %d, %d %d",i,mA,pwm);
 		if (mA>((i-255)*maxMA/256))
@@ -1097,9 +1090,10 @@ void FetDriver::CalTableB(int32_t maxMA)
 		Serial.print(PWM_Table_B[i]);
 		Serial.print(",");
 	}
+	
 	Serial.print("\n\r");
-
 	Serial.print("\n\r");
+	
 	for (i=0; i<512; i++)
 	{
 		Serial.print(table2[i]);
@@ -1108,17 +1102,17 @@ void FetDriver::CalTableB(int32_t maxMA)
 	Serial.print("\n\r");
 }
 
-
+//
 void FetDriver::begin()
 {
 	int16_t i;
 	uint32_t t0;
-	int32_t i0=0;
+	int32_t i0 = 0;
 	uint32_t zero,x,k;
 	int32_t max_mA;
 
-
-	ptrInstance=(FetDriver *)this;
+	ptrInstance = (FetDriver *)this;
+	
 	//enable 1V reference
 	SYSCTRL->VREF.reg |= SYSCTRL_VREF_BGOUTEN;
 	ADCRead(ISENSE_FET_A); //setup the adc with fast timing
@@ -1147,11 +1141,8 @@ void FetDriver::begin()
 	measureCoilA_zero();
 	measureCoilB_zero();
 
-
 //	ADCStart(ISENSE_FET_A);
-
-
-	//return;
+//return;
 //	while(1)
 //	{
 //		LOG("tick %d %d", TCC0->CC[1].reg,TCC0->CC[0].reg);
@@ -1193,34 +1184,30 @@ void FetDriver::begin()
 	max_mA=NVM->motorParams.currentMa;
 	WARNING("Maximum current is %d",max_mA);
 
-
-	if (NVM->motorParams.parametersVaild && max_mA!=0)
+	if (NVM->motorParams.parametersVaild && (max_mA != 0))
 	{
 		CalTableA(max_mA);
 		CalTableB(max_mA);
-
 	}else
 	{
 		WARNING("NVM is not correct default to 1500mA");
-		max_mA=1500;
+		max_mA = 1500;
 		WARNING("calibrating phase A %dmA",max_mA);
 		CalTableA(max_mA);
 		WARNING("calibrating phase B %dmA",max_mA);
 		CalTableB(max_mA);
-
 	}
 	return;
 
 	//coilA_PWM(100);
 
-	x=0;
+	x = 0;
 	while(1)
 	{
 		//LOG("Trying to move motor %d",x);
 		delay(1);
 		move(x, 1000);
 		x=x+256;
-
 	}
 
 
@@ -1438,9 +1425,9 @@ void FetDriver::begin()
 	pinMode(PIN_A4954_VREF34, OUTPUT);
 	pinMode(PIN_A4954_VREF12, OUTPUT);
 
-	enabled=true;
-	lastStepMicros=0;
-	forwardRotation=true;
+	enabled = true;
+	lastStepMicros = 0;
+	forwardRotation = true;
 
 	enableTCC0();
 	setupDAC();
@@ -1456,32 +1443,27 @@ void FetDriver::begin()
 	return;
 }
 
-
-
-
-
-
-
-
+//Read B coil current
 int32_t FetDriver::getCoilB_mA(void)
 {
 	int32_t adc,ret;
-	//fastADCRead(ISENSE_FET_B);
-	adc=(int32_t)fastADCRead(ISENSE_FET_B);
-	ret=FET_ADC_TO_MA(adc-coilB_Zero);
+
+	adc = (int32_t)fastADCRead(ISENSE_FET_B);
+	ret = FET_ADC_TO_MA(adc-coilB_Zero);
 	//LOG("coilb %d %d",adc,ret);
 	return ret;
 }
+
+//Read A coil current
 int32_t FetDriver::getCoilA_mA(void)
 {
 	int32_t adc,ret;
-	//fastADCRead(ISENSE_FET_A);
-	adc=(int32_t)fastADCRead(ISENSE_FET_A);
-	ret=FET_ADC_TO_MA(adc-coilA_Zero);
+
+	adc = (int32_t)fastADCRead(ISENSE_FET_A);
+	ret = FET_ADC_TO_MA(adc-coilA_Zero);
 	//LOG("coila %d %d",adc,ret);
 	return ret;
 }
-
 
 //this is precise move and modulo of A4954_NUM_MICROSTEPS is a full step.
 // stepAngle is in A4954_NUM_MICROSTEPS units..
@@ -1497,7 +1479,8 @@ int32_t FetDriver::move(int32_t stepAngle, uint32_t mA)
 	int32_t dacSin,dacCos;
 	int32_t dacSin_mA,dacCos_mA;
 	int32_t maxMa;
-	static int32_t last_dacSin_mA=0,last_dacCos_mA=0;;
+	static int32_t last_dacSin_mA = 0, last_dacCos_mA = 0;
+	
 	if (enabled == false)
 	{
 		WARNING("FET Driver disabled");
@@ -1510,13 +1493,13 @@ int32_t FetDriver::move(int32_t stepAngle, uint32_t mA)
 		GPIO_LOW(PIN_FET_ENABLE);
 		return stepAngle;
 	}
+	
 	GPIO_HIGH(PIN_FET_ENABLE);
-
-
-	maxMa=NVM->motorParams.currentMa;
-	if (maxMa==0)
+	maxMa = NVM->motorParams.currentMa;
+	
+	if (maxMa == 0)
 	{
-		maxMa=2200;
+		maxMa = 2200;
 	}
 
 	//WARNING("move %d %d",stepAngle,mA);
@@ -1534,41 +1517,40 @@ int32_t FetDriver::move(int32_t stepAngle, uint32_t mA)
 	//figure out our sine Angle
 	// note our SINE_STEPS is 4x of microsteps for a reason
 	//angle=(stepAngle+(SINE_STEPS/8)) % SINE_STEPS;
-	angle=(stepAngle) % SINE_STEPS;
+	angle = (stepAngle) % SINE_STEPS;
 	//calculate the sine and cosine of our angle
-	sin=sine(angle);
-	cos=cosine(angle);
+	sin = sine(angle);
+	cos = cosine(angle);
 
 	//if we are reverse swap the sign of one of the angels
 	if (false == forwardRotation)
 	{
-		cos=-cos;
+		cos = -cos;
 	}
 
 	//LOG("sin/cos %d %d %d", sin,cos,angle);
 	//scale sine result by current(mA)
-	dacSin_mA=((int32_t)mA*(int32_t)(sin))/SINE_MAX;
+	dacSin_mA = ((int32_t)mA*(int32_t)(sin))/SINE_MAX;
 
 	//scale cosine result by current(mA)
-	dacCos_mA=((int32_t)mA*(int32_t)(cos))/SINE_MAX;
+	dacCos_mA = ((int32_t)mA*(int32_t)(cos))/SINE_MAX;
 
-	coilA_SetPoint=FET_MA_TO_ADC(dacSin_mA);
-	coilB_SetPoint=FET_MA_TO_ADC(dacCos_mA);
+	coilA_SetPoint = FET_MA_TO_ADC(dacSin_mA);
+	coilB_SetPoint = FET_MA_TO_ADC(dacCos_mA);
 	//LOG("sin/cos %d %d", dacSin,dacCos);
 
 	//convert value into 12bit DAC scaled to 3300mA max
-	dacSin=(int32_t)((int64_t)dacSin_mA*(255))/maxMa;
+	dacSin = (int32_t)((int64_t)dacSin_mA*(255))/maxMa;
 
 	//convert value into 12bit DAC scaled to 3300mA max
-	dacCos=(int32_t)((int64_t)dacCos_mA*(255))/maxMa;
+	dacCos = (int32_t)((int64_t)dacCos_mA*(255))/maxMa;
 
 	//LOG("sin/cos %d %d", dacSin,dacCos);
 	//limit the table index to +/-255
-	dacCos=MIN(dacCos,(int32_t)255);
-	dacCos=MAX(dacCos,(int32_t)-255);
-	dacSin=MIN(dacSin,(int32_t)255);
-	dacSin=MAX(dacSin,(int32_t)-255);
-
+	dacCos = MIN(dacCos,(int32_t)255);
+	dacCos = MAX(dacCos,(int32_t)-255);
+	dacSin = MIN(dacSin,(int32_t)255);
+	dacSin = MAX(dacSin,(int32_t)-255);
 
 	if ((dacSin_mA-last_dacSin_mA)>200)
 	{
@@ -1598,63 +1580,15 @@ int32_t FetDriver::move(int32_t stepAngle, uint32_t mA)
 		PIN_GPIO_OUTPUT(PIN_FET_IN3);
 		}
 	delayMicroseconds(20);
-	last_dacSin_mA=dacSin_mA;
-	last_dacCos_mA=dacCos_mA;
-
-//	YELLOW_LED(1);
-//	uint32_t t0=micros();
-//	int done=0;
-//	int32_t a,b;
-//	a=FET_MA_TO_ADC(dacSin_mA);
-//	b=FET_MA_TO_ADC(dacCos_mA);
-//	while ((micros()-t0)<20 && done!=0x03)
-//	{
-//		if ( (fastADCRead(ISENSE_FET_A)-a)<FET_MA_TO_ADC(200))
-//		{
-//			GPIO_LOW(PIN_FET_IN2);
-//			PIN_GPIO_OUTPUT(PIN_FET_IN2);
-//			GPIO_HIGH(PIN_FET_IN1);
-//			PIN_GPIO_OUTPUT(PIN_FET_IN1);
-//			//coilA_PWM(PWM_Table_A[dacSin+255]);
-//			done |=0x01;
-//		}
-//
-//		if ((fastADCRead(ISENSE_FET_A)-a)>FET_MA_TO_ADC(200))
-//		{
-//			GPIO_HIGH(PIN_FET_IN2);
-//			PIN_GPIO_OUTPUT(PIN_FET_IN2);
-//			GPIO_LOW(PIN_FET_IN1);
-//			PIN_GPIO_OUTPUT(PIN_FET_IN1);
-//			done |=0x01;
-//		}
-//		if  ((fastADCRead(ISENSE_FET_B)-b)<FET_MA_TO_ADC(200))
-//		{
-//			GPIO_LOW(PIN_FET_IN4);
-//			PIN_GPIO_OUTPUT(PIN_FET_IN4);
-//			GPIO_HIGH(PIN_FET_IN3);
-//			PIN_GPIO_OUTPUT(PIN_FET_IN3);
-//			done |=0x02;
-//		}
-//		if  ((fastADCRead(ISENSE_FET_B)-b)>FET_MA_TO_ADC(200))
-//		{
-//			GPIO_HIGH(PIN_FET_IN4);
-//			PIN_GPIO_OUTPUT(PIN_FET_IN4);
-//			GPIO_LOW(PIN_FET_IN3);
-//			PIN_GPIO_OUTPUT(PIN_FET_IN3);
-//			done |=0x02;
-//		}
-//
-//	}
-//
-//	YELLOW_LED(0);
-
+	last_dacSin_mA = dacSin_mA;
+	last_dacCos_mA = dacCos_mA;
 
 	//LOG("sin/cos %d %d", dacSin,dacCos);
 	//loop up the current from table and set the PWM
 	coilA_PWM(PWM_Table_A[dacSin+255]);
 	coilB_PWM(PWM_Table_B[dacCos+255]);
 
-	lastStepMicros=micros();
+	lastStepMicros = micros();
 	return stepAngle;
 }
 #pragma GCC pop_options //fast optimization

@@ -419,8 +419,9 @@ void TC5_Handler()
 	{
 		int error=0;
 
-		error=(stepperCtrl.processFeedback()); //handle the control loop
-		YELLOW_LED(error);
+		error = (stepperCtrl.processFeedback()); //handle the control loop
+		GREEN_LED(error);
+		
 #ifdef PIN_ENABLE
 		GPIO_OUTPUT(PIN_ERROR);
 		if (error)
@@ -431,7 +432,6 @@ void TC5_Handler()
 			digitalWrite(PIN_ERROR, HIGH);
 		}
 #else
-
 		if (NVM->SystemParams.errorPinMode == ERROR_PIN_MODE_ERROR)
 		{
 			GPIO_OUTPUT(PIN_ERROR);
@@ -504,6 +504,7 @@ static void syncBOD33(void)  {
 	}
 }
 
+//Configure brownout level
 static void configure_bod(void)
 {
 	//syncBOD33();
@@ -522,10 +523,10 @@ static void configure_bod(void)
 	NVIC_EnableIRQ(SYSCTRL_IRQn);
 }
 
-
+//
 void NZS::begin(void)
 {
-	int to=20;
+	int to = 20;
 	stepCtrlError_t stepCtrlError;
 
 	//set up the pins correctly on the board.
@@ -589,7 +590,7 @@ void NZS::begin(void)
 	while (STEPCTRL_NO_ERROR != stepCtrlError)
 	{
 		LOG("init the stepper controller");
-		stepCtrlError=stepperCtrl.begin(); //start controller before accepting step inputs
+		stepCtrlError = stepperCtrl.begin(); //start controller before accepting step inputs
 
 		//todo we need to handle error on LCD and through command line
 		if (STEPCTRL_NO_POWER == stepCtrlError)
@@ -657,15 +658,15 @@ void NZS::begin(void)
 	LOG("SETUP DONE!");
 }
 
-
+//
 void printLocation(void)
 {
-	char buf[128]={0};
+	char buf[128] = {0};
 	Location_t loc;
 	int32_t n, i, len;
 	int32_t pktSize;
 
-	if (dataEnabled==0)
+	if (dataEnabled == 0)
 	{
 		RED_LED(false);
 		return;
@@ -673,29 +674,27 @@ void printLocation(void)
 
 	//the packet length for binary print is 12bytes
 	// assuming rate of 6Khz this would be 72,000 baud
-	i=0;
-	n=stepperCtrl.getLocation(&loc);
-	if (n==-1)
+	i = 0;
+	n = stepperCtrl.getLocation(&loc);
+	if (n == -1)
 	{
 		RED_LED(false);
 		return;
 	}
 
-	len=0;
-	pktSize=sizeof(Location_t)+1; //packet lenght is size location plus sync byte
+	len = 0;
+	pktSize = sizeof(Location_t)+1; //packet lenght is size location plus sync byte
 
-	//     //binary write
-
-	while(n>=0 && (len)<=(128-pktSize))
+	//binary write
+	while((n >= 0) && (len <= (128-pktSize)))
 	{
 		memcpy(&buf[len],&loc,sizeof(Location_t));
-		len+=sizeof(Location_t);
-		buf[len]=0XAA; //sync
+		len += sizeof(Location_t);
+		buf[len] = 0xAA; //sync
 		len++;
-		buf[len]=sizeof(Location_t); //data len
+		buf[len] = sizeof(Location_t); //data len
 		len++;
-
-		n=stepperCtrl.getLocation(&loc);
+		n = stepperCtrl.getLocation(&loc);
 		i++;
 	}
 	SerialUSB.write(buf,len);
@@ -710,7 +709,7 @@ void printLocation(void)
 	//   }
 	//   SerialUSB.write(buf,strlen(buf));
 
-	if (n<=0)
+	if (n <= 0)
 	{
 		RED_LED(false);
 	}else
@@ -721,6 +720,7 @@ void printLocation(void)
 	return;
 }
 
+//
 void NZS::loop(void)
 {
 	eepromData_t eepromData;

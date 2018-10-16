@@ -104,6 +104,7 @@ void NZS_LCD::showSplash(void)
 	display.display();		//update
 }
 
+//
 void NZS_LCD::setMenu(menuItem_t *pMenu)
 {
 	if (false == displayEnabled)
@@ -114,7 +115,7 @@ void NZS_LCD::setMenu(menuItem_t *pMenu)
 	menuIndex = 0;
 }
 
-
+//Show configuration options
 void NZS_LCD::showOptions(void)
 {
 	int32_t i,j;
@@ -128,7 +129,7 @@ void NZS_LCD::showOptions(void)
 	i = optionIndex;
 	j = 0;
 
-	while(strlen(ptrOptions[i].str)>0 && j<3)
+	while((strlen(ptrOptions[i].str) > 0) && (j < 3))
 	{
 		if (i == optionIndex)
 		{
@@ -157,7 +158,7 @@ void __attribute__ ((optimize("Ofast"))) NZS_LCD::showMenu(void)
 
 	i = menuIndex;
 	j = 0;
-	while((ptrMenu[i].func != NULL) && j<3)
+	while((ptrMenu[i].func != NULL) && (j < 3))
 	{
 		if (i == menuIndex)
 		{
@@ -203,7 +204,7 @@ void __attribute__ ((optimize("Ofast"))) NZS_LCD::updateMenu(void)
 	}
 
 	//handle push buttons
-	if ((digitalRead(PIN_SW3) == 0) && (buttonState & 0x02)==0)
+	if ((digitalRead(PIN_SW3) == 0) && (buttonState & 0x02) == 0)
 	{
 		buttonState |= 0x02;
 
@@ -211,8 +212,8 @@ void __attribute__ ((optimize("Ofast"))) NZS_LCD::updateMenu(void)
 		if (ptrMenu[menuIndex].func == NULL)
 		{
 			//exit pressed
-			menuIndex=0; //reset menu index
-			menuActive=false;
+			menuIndex = 0; //reset menu index
+			menuActive = false;
 			return;
 		}
 
@@ -222,22 +223,22 @@ void __attribute__ ((optimize("Ofast"))) NZS_LCD::updateMenu(void)
 			if (ptrOptions != NULL)
 			{
 				char *ptrArgV[1];
-				char str[25]={0};
-				ptrArgV[0]=str;
+				char str[25] = {0};
+				ptrArgV[0] = str;
 				sprintf(str,"%d",optionIndex);
 				LOG("Calling function for %s %s",ptrMenu[menuIndex].str,str);
 				ptrMenu[menuIndex].func(1,ptrArgV);
-				ptrOptions=NULL;
-				optionIndex=0;
+				ptrOptions = NULL;
+				optionIndex = 0;
 			}else
 			{
 				int i;
-				i=ptrMenu[menuIndex].func(0,NULL);
+				i = ptrMenu[menuIndex].func(0,NULL);
 				if (ptrMenu[menuIndex].ptrOptions != NULL)
 				{
 					LOG("displaying options for %s %d",ptrMenu[menuIndex].str,i);
-					ptrOptions=ptrMenu[menuIndex].ptrOptions;
-					optionIndex=i;
+					ptrOptions = ptrMenu[menuIndex].ptrOptions;
+					optionIndex = i;
 				}
 			}
 
@@ -245,7 +246,7 @@ void __attribute__ ((optimize("Ofast"))) NZS_LCD::updateMenu(void)
 		}
 	}
 
-	if (digitalRead(PIN_SW1)==0 && (buttonState & 0x01)==0)
+	if ((digitalRead(PIN_SW1) == 0) && ((buttonState & 0x01) == 0))
 	{
 		buttonState |= 0x01;
 		LOG("SW1 pressed");
@@ -254,7 +255,7 @@ void __attribute__ ((optimize("Ofast"))) NZS_LCD::updateMenu(void)
 			optionIndex++;
 			if (strlen(ptrOptions[optionIndex].str) == 0)
 			{
-				optionIndex=0;
+				optionIndex = 0;
 			}
 		} else
 		{
@@ -263,10 +264,9 @@ void __attribute__ ((optimize("Ofast"))) NZS_LCD::updateMenu(void)
 				menuIndex++;
 			} else
 			{
-				menuIndex=0;
+				menuIndex = 0;
 			}
 		}
-
 	}
 
 	if (digitalRead(PIN_SW1))
@@ -282,7 +282,7 @@ void __attribute__ ((optimize("Ofast"))) NZS_LCD::updateMenu(void)
 
 void NZS_LCD::forceMenuActive(void)
 {
-	menuActive=true;
+	menuActive = true;
 }
 
 void __attribute__((optimize("Ofast")))NZS_LCD::process(void)
@@ -303,7 +303,7 @@ void __attribute__((optimize("Ofast")))NZS_LCD::process(void)
 	if (digitalRead(PIN_SW4) == 0 && (buttonState & 0x04) == 0)
 	{
 		buttonState |= 0x04;
-		menuActive=!menuActive;
+		menuActive = !menuActive;
 	}
 
 	if (digitalRead(PIN_SW4))
@@ -454,41 +454,41 @@ void NZS_LCD::updateLCD(void)
 	{
 		return;
 	}
+
 	char str[3][25];
-	static int highRPM=0;
+	static int highRPM = 0;
 	int32_t y,z,err;
 
 	static int64_t lastAngle,deg;
-	static int32_t RPM=0;
-	static int32_t lasttime=0;
+	static int32_t RPM = 0;
+	static int32_t lasttime = 0;
 
 	bool state;
-	static int32_t dt=40;
-	static uint32_t t0=0;
+	static int32_t dt = 40;
+	static uint32_t t0 = 0;
 
-	static bool rpmDone=false;
+	static bool rpmDone = false;
 
-	if ((millis()-t0)>500)
+	if ((millis()-t0) > 500)
 	{
-
 		int32_t x,d;
 
 		//do first half of RPM measurement
 		if (!rpmDone)
 		{
 			//LOG("loop time is %dus",ptrStepperCtrl->getLoopTime());
-			lastAngle=ptrStepperCtrl->getCurrentAngle();
-			lasttime=millis();
-			rpmDone=true;
+			lastAngle = ptrStepperCtrl->getCurrentAngle();
+			lasttime = millis();
+			rpmDone = true;
 			return;
 		}
 
 		//do the second half of rpm measurement and update LCD.
-		if (rpmDone && (millis()-lasttime)>(dt))
+		if (rpmDone && (millis() - lasttime) > (dt))
 		{
 			rpmDone = false;
 			deg = ptrStepperCtrl->getCurrentAngle();
-			y = millis()-lasttime;
+			y = millis() - lasttime;
 			err = ptrStepperCtrl->getLoopError();
 			t0 = millis();
 			d = (int64_t)(lastAngle-deg);
@@ -500,8 +500,8 @@ void NZS_LCD::updateLCD(void)
 				x=((int64_t)d*(60*1000UL))/((int64_t)y * ANGLE_STEPS);
 			}
 
-			lastAngle=deg;
-			RPM=(int32_t)x; //(7*RPM+x)/8; //average RPMs
+			lastAngle = deg;
+			RPM = (int32_t)x; //(7*RPM+x)/8; //average RPMs
 			if (RPM>500)
 			{
 				dt = 10;
@@ -510,32 +510,31 @@ void NZS_LCD::updateLCD(void)
 			{
 				dt = 100;
 			}
-			str[0][0]='\0';
+			str[0][0] = '\0';
 			//LOG("RPMs is %d, %d, %d",(int32_t)x,(int32_t)d,(int32_t)y);
 			switch(ptrStepperCtrl->getControlMode())
 			{
 				case CTRL_SIMPLE:
-					sprintf(str[0], "%dRPM simp",RPM);
+					sprintf(str[0], "%3dRPM simp",RPM);
 					break;
 
 				case CTRL_POS_PID:
-					sprintf(str[0], "%dRPM pPID",RPM);
+					sprintf(str[0], "%3dRPM pPID",RPM);
 					break;
 
 				case CTRL_POS_VELOCITY_PID:
-					sprintf(str[0], "%dRPM vPID",RPM);
+					sprintf(str[0], "%3dRPM vPID",RPM);
 					break;
 
 				case CTRL_OPEN:
-					sprintf(str[0], "%dRPM open",RPM);
+					sprintf(str[0], "%3dRPM open",RPM);
 					break;
 				case CTRL_OFF:
-					sprintf(str[0], "%dRPM off",RPM);
+					sprintf(str[0], "%3dRPM off",RPM);
 					break;
 				default:
 					sprintf(str[0], "error %u",ptrStepperCtrl->getControlMode());
 					break;
-
 			}
 
 
@@ -545,7 +544,6 @@ void NZS_LCD::updateLCD(void)
 			y = abs(err-(z*100));
 
 			sprintf(str[1],"%01d.%02d err", z,y);
-
 			deg = ptrStepperCtrl->getDesiredAngle();
 
 #ifndef NZS_LCD_ABSOULTE_ANGLE

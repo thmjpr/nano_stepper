@@ -131,23 +131,23 @@
  *  Typedefs that are used across multiple files/modules
  */
 typedef enum {
-	CW_ROTATION=0,
-	CCW_ROTATION=1,
+	CW_ROTATION = 0,
+	CCW_ROTATION = 1,
 } RotationDir_t;
 
 typedef enum {
-	ERROR_PIN_MODE_ENABLE=0, //error pin works like enable on step sticks
-	ERROR_PIN_MODE_ACTIVE_LOW_ENABLE=1, //error pin works like enable on step sticks
-	ERROR_PIN_MODE_ERROR=2,  //error pin is low when there is angle error
-	ERROR_PIN_MODE_BIDIR=3,   //error pin is bidirection open collector
+	ERROR_PIN_MODE_ENABLE = 0, 				//error pin works like enable on step sticks
+	ERROR_PIN_MODE_ACTIVE_LOW_ENABLE = 1,	//error pin works like enable on step sticks
+	ERROR_PIN_MODE_ERROR = 2,				//error pin is low when there is angle error
+	ERROR_PIN_MODE_BIDIR = 3,				//error pin is bidirection open collector
 } ErrorPinMode_t;
 
 typedef enum {
-	CTRL_OFF =0, 	 //controller is disabled
-	CTRL_OPEN=1, 	 //controller is in open loop mode
-	CTRL_SIMPLE = 2, //simple error controller
-	CTRL_POS_PID =3, //PID  Position controller
-	CTRL_POS_VELOCITY_PID =4, //PID  Velocity controller
+	CTRL_OFF = 0, 	 						//controller is disabled
+	CTRL_OPEN = 1, 	 						//controller is in open loop mode
+	CTRL_SIMPLE = 2, 						//simple error controller
+	CTRL_POS_PID = 3, 						//PID  Position controller
+	CTRL_POS_VELOCITY_PID = 4, 				//PID  Velocity controller
 } feedbackCtrl_t;
 
 
@@ -174,27 +174,31 @@ typedef enum {
  #define SerialUSB Serial
 #endif 
 
-#define PIN_STEP_INPUT  (0)
-#define PIN_DIR_INPUT   (1)
+#define PIN_STEP_INPUT  (0)		//D0, PA11
+#define PIN_DIR_INPUT   (1)		//D10, PA10
 
-#define PIN_MOSI        (23)
-#define PIN_SCK         (24)
-#define PIN_MISO        (22)
+#define PIN_MOSI        (23)	//
+#define PIN_SCK         (24)	//
+#define PIN_MISO        (22)	//
 
 #ifdef MECHADUINO_HARDWARE
  #define PIN_ERROR 		(19)  //analogInputToDigitalPin(PIN_A5))
 #elif defined NEMA17_SMART_STEPPER_3_21_2017
  #define PIN_SW1		(19)	//analogInputToDigitalPin(PIN_A5))
  #define PIN_SW3		(14)	//analogInputToDigitalPin(PIN_A0))
- #define PIN_SW4		(2)	//D2
- #define PIN_ENABLE	(10)
- #define PIN_ERROR	(3)
-#elif defined NZ_STEPPER_2017		//NZstepper hardware
+ #define PIN_SW4		(2)		//D2
+ #define PIN_ENABLE		(10)
+ #define PIN_ERROR		(3)
+ #define PIN_VMOTOR		(15)
+ 
+#elif defined NZ_STEPPER_2017	//NZstepper hardware https://github.com/thmjpr/nano_stepper/tree/master/hardware
  #define PIN_SW1		(19)	//analogInputToDigitalPin(PIN_A5))
  #define PIN_SW3		(14)	//analogInputToDigitalPin(PIN_A0))
  #define PIN_SW4		(15)	//analogInputToDigitalPin(PIN_A1))
  #define PIN_ERROR		(10)
  #define PIN_ENABLE		(3)
+ #define PIN_VMOTOR		PIN_B2		//Can try using PB02/AIN10/SWDclk as analog voltage input?			Could also change PA19 (D12) to be SW4 input
+ 
 #else				//Nano zero stepper (version without reading motor voltage)
  #define PIN_SW1		(19)	//analogInputToDigitalPin(PIN_A5))
  #define PIN_SW3		(14)	//analogInputToDigitalPin(PIN_A0))
@@ -228,7 +232,7 @@ typedef enum {
 #define PIN_FET_IN4		(2) //PA14 TC3/W0[0] TCC0/WO[4] 0
 #define PIN_FET_VREF1	(4)
 #define PIN_FET_VREF2	(3)
-#define PIN_FET_ENABLE		(12)
+#define PIN_FET_ENABLE	(12)
 
 //current sense pin from each H-bridge
 #define ISENSE_FET_A	 (17) //analogInputToDigitalPin(PIN_A3)
@@ -250,7 +254,7 @@ typedef enum {
 #define PIN_A5995_SLEEPn	(25) //RXLED
 
 #ifndef MECHADUINO_HARDWARE
-#define PIN_YELLOW_LED  (8)
+#define PIN_GREEN_LED  	(8)
 #endif
 
 #ifdef NEMA_23_10A_HW
@@ -343,9 +347,9 @@ static void boardSetupPins(void)
 	
 	pinMode(PIN_RED_LED,OUTPUT);
 
-#ifdef PIN_YELLOW_LED
-	pinMode(PIN_YELLOW_LED,OUTPUT);
-	digitalWrite(PIN_YELLOW_LED,HIGH);
+#ifdef PIN_GREEN_LED		//Green LED for "Activity"	
+	pinMode(PIN_GREEN_LED, OUTPUT);
+	digitalWrite(PIN_GREEN_LED, HIGH);
 #endif
 }
 
@@ -355,16 +359,16 @@ static float GetMotorVoltage(void)
 	uint32_t x;
 	float f;
 	//the motor voltage is 1/101 of the adc
-	x=analogRead(PIN_VMOTOR);  //this should be a 10bit value mapped to 3.3V
-	f=(float)x*3.3/1024.0*101.0;
+	x = analogRead(PIN_VMOTOR);  //this should be a 10bit value mapped to 3.3V
+	f = (float)x*3.3/1024.0*101.0;
 	return f;
 }
 #endif
 
-static void inline YELLOW_LED(bool state)
+static void inline GREEN_LED(bool state)
 {
-#ifdef PIN_YELLOW_LED
-	digitalWrite(PIN_YELLOW_LED,!state);
+#ifdef PIN_GREEN_LED
+	digitalWrite(PIN_GREEN_LED,!state);
 #endif
 }
 

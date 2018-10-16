@@ -372,13 +372,7 @@ int32_t A4954::move(int32_t stepAngle, uint32_t mA)
 		bridge2(0);
 	}
 
-//	if (i++>3000)
-//	{
-//		i=0;
-//	}
-	//	YELLOW_LED(led);
-	//	led=(led+1) & 0x01;
-	lastStepMicros=micros();
+	lastStepMicros = micros();
 	return stepAngle;
 }
 #pragma GCC pop_options
