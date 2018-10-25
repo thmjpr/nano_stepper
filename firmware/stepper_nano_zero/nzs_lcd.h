@@ -42,15 +42,8 @@ typedef struct {
 
 } menuItem_t;
 
-<<<<<<< HEAD
-class NZS_LCD
-=======
-
-
-
 
 class LCD
->>>>>>> 5c4fd1bcf080d8b54497ce33e1f1b736a181eeae
 {
 	private:
 		bool displayEnabled;

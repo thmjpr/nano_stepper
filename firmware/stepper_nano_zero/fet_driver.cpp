@@ -1184,7 +1184,7 @@ void FetDriver::begin()
 	max_mA=NVM->motorParams.currentMa;
 	WARNING("Maximum current is %d",max_mA);
 
-	if (NVM->motorParams.parametersVaild && (max_mA != 0))
+	if (NVM->motorParams.parametersValid && (max_mA != 0))
 	{
 		CalTableA(max_mA);
 		CalTableB(max_mA);

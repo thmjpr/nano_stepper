@@ -19,7 +19,7 @@ typedef struct {
 	float Kp;
 	float Ki;
 	float Kd;
-	bool parametersVaild;
+	bool parametersValid;
 } PIDparams_t;
 
 typedef struct {
@@ -29,7 +29,7 @@ typedef struct {
 	int32_t homeHoldMa; //hold current when error homing
 	bool motorWiring;  //forward wiring of motor or reverse
 	int32_t fullStepsPerRotation; //how many full steps per rotation is the motor
-	bool parametersVaild;
+	bool parametersValid;
 } MotorParams_t;
 
 typedef struct {
@@ -41,7 +41,7 @@ typedef struct {
 	int32_t homePin; //if greater than zero this is the pin we use trigger home current settings
 	bool errorLogic; //if high and error will be high on output pin
 	int32_t homeAngleDelay; //the angle to delay before switching to lower homing current
-	bool parametersVaild;
+	bool parametersValid;
 } SystemParams_t;
 
 #ifdef NZS_FAST_CAL

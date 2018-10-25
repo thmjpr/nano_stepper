@@ -26,7 +26,7 @@ void LCD::begin(StepperCtrl *ptrsCtrl)
 	pinMode(PIN_SW3, INPUT_PULLUP);
 	pinMode(PIN_SW4, INPUT_PULLUP);
 #endif
-	buttonState=0;
+	buttonState = 0;
 
 	//we need access to the stepper controller
 	ptrStepperCtrl = ptrsCtrl; //save a pointer to the stepper controller
@@ -41,6 +41,7 @@ void LCD::begin(StepperCtrl *ptrsCtrl)
 	//check that the SCL and SDA are pulled high
 	pinMode(PIN_SDA, INPUT);
 	pinMode(PIN_SCL, INPUT);
+
 	if (digitalRead(PIN_SDA) == 0)
 	{
 		//pin is not pulled up
@@ -59,7 +60,7 @@ void LCD::begin(StepperCtrl *ptrsCtrl)
 	{
 		WARNING("SCL/SDA not pulled up");
 	}
-	if (false == displayEnabled)
+	if (displayEnabled == false)
 	{
 		WARNING("NO display found, LCD will not be used");
 	}
@@ -70,8 +71,7 @@ void LCD::begin(StepperCtrl *ptrsCtrl)
 
 void __attribute__ ((optimize("Ofast"))) LCD::lcdShow(const char *line1, const char *line2,const char *line3)
 {
-
-	if (false == displayEnabled)
+	if (displayEnabled == false)
 	{
 		return;
 	}
@@ -85,64 +85,49 @@ void __attribute__ ((optimize("Ofast"))) LCD::lcdShow(const char *line1, const c
 	display.setCursor(0,40);
 	display.println(line3);
 	display.display();
-
 }
 
-<<<<<<< HEAD
+
 //Logo splash screen
-void NZS_LCD::showSplash(void)
-=======
 void LCD::showSplash(void)
->>>>>>> 5c4fd1bcf080d8b54497ce33e1f1b736a181eeae
 {
-	if (false == displayEnabled)
+	if (displayEnabled == false)
 	{
 		return;
 	}
-<<<<<<< HEAD
 	display.clearDisplay();
-	display.drawBitmap(0, 0, icon_splash_screen, 128, 64, WHITE); //Show logo
+	display.drawBitmap(0, 0, icon_splash_screen, 128, 64, WHITE);		//Show logo
 	display.setCursor(60, 55);
 	display.setTextSize(1);
 	display.setTextColor(WHITE);
 	display.println(BUILD_DATE);
-	display.display();		//update
+	display.display();							//update
 }
 
 //
-void NZS_LCD::setMenu(menuItem_t *pMenu)
-=======
-#ifdef A5995_DRIVER
-	lcdShow("MisfitTech","NEMA 23", VERSION);
-#else
-	lcdShow("MisfitTech","NEMA 17", VERSION);
-#endif
-}
-
-
 void LCD::setMenu(menuItem_t *pMenu)
->>>>>>> 5c4fd1bcf080d8b54497ce33e1f1b736a181eeae
 {
-	if (false == displayEnabled)
+	if (displayEnabled == false)
 	{
 		return;
 	}
 	ptrMenu = pMenu;
 	menuIndex = 0;
+
+#ifdef A5995_DRIVER
+	lcdShow("MisfitTech", "NEMA 23", VERSION);
+#else
+	lcdShow("MisfitTech", "NEMA 17", VERSION);
+#endif
 }
 
-<<<<<<< HEAD
 //Show configuration options
-void NZS_LCD::showOptions(void)
-=======
-
 void LCD::showOptions(void)
->>>>>>> 5c4fd1bcf080d8b54497ce33e1f1b736a181eeae
 {
 	int32_t i,j;
 	char str[3][26] = {0};
 
-	if (false == displayEnabled)
+	if (displayEnabled == false)
 	{
 		return;
 	}
@@ -154,10 +139,10 @@ void LCD::showOptions(void)
 	{
 		if (i == optionIndex)
 		{
-			sprintf(str[j],"*%s",ptrOptions[i].str);
+			sprintf(str[j], "*%s", ptrOptions[i].str);
 		}else
 		{
-			sprintf(str[j]," %s",ptrOptions[i].str);
+			sprintf(str[j],  " %s", ptrOptions[i].str);
 		}
 		j++;
 		i++;
@@ -172,7 +157,7 @@ void __attribute__ ((optimize("Ofast"))) LCD::showMenu(void)
 {
 	int32_t i,j;
 	char str[3][26] = {0};
-	if (false == displayEnabled)
+	if (displayEnabled == false)
 	{
 		return;
 	}
@@ -183,10 +168,10 @@ void __attribute__ ((optimize("Ofast"))) LCD::showMenu(void)
 	{
 		if (i == menuIndex)
 		{
-			sprintf(str[j],"*%s",ptrMenu[i].str);
+			sprintf(str[j], "*%s", ptrMenu[i].str);
 		}else
 		{
-			sprintf(str[j]," %s",ptrMenu[i].str);
+			sprintf(str[j], " %s", ptrMenu[i].str);
 		}
 		j++;
 		i++;
@@ -211,7 +196,7 @@ void __attribute__ ((optimize("Ofast"))) LCD::showMenu(void)
 
 void __attribute__ ((optimize("Ofast"))) LCD::updateMenu(void)
 {
-	if (false == displayEnabled)
+	if (displayEnabled == false)
 	{
 		return;
 	}
@@ -308,7 +293,7 @@ void LCD::forceMenuActive(void)
 
 void __attribute__((optimize("Ofast")))LCD::process(void)
 {
-	if (false == displayEnabled)
+	if (displayEnabled == false)
 	{
 		return;
 	}
@@ -333,145 +318,10 @@ void __attribute__((optimize("Ofast")))LCD::process(void)
 	}
 }
 #endif
-/*
-//does the LCD menu system
-void StepperCtrl::menu(void)
-{
-
-	bool done=false;
-	int menuItem=0;
-	char str[100];
-	int sw1State=0;
-	int sw3State=0;
-
-	pinMode(PIN_SW1, INPUT_PULLUP);
-	pinMode(PIN_SW3, INPUT_PULLUP);
-	pinMode(PIN_SW4, INPUT_PULLUP);
-
-
-	while (!done)
-	{
-		display.clearDisplay();
-		display.setTextSize(2);
-		display.setTextColor(WHITE);
-
-		if (menuItem==0)
-		{
-			sprintf(str,"*Run Cal");
-			display.setCursor(0,0);
-			display.println(str);
-		}else
-		{
-			sprintf(str," Run Cal");
-			display.setCursor(0,0);
-			display.println(str);
-		}
-
-		if (menuItem==1)
-		{
-			sprintf(str,"*Check Cal");
-			display.setCursor(0,20);
-			display.println(str);
-		}else
-		{
-			sprintf(str," Check Cal");
-			display.setCursor(0,20);
-			display.println(str);
-		}
-
-		if (menuItem==2)
-		{
-			sprintf(str,"*Exit");
-			display.setCursor(0,40);
-			display.println(str);
-		}else
-		{
-			sprintf(str," Exit");
-			display.setCursor(0,40);
-			display.println(str);
-		}
-
-		display.display();
-
-		if (sw1State==1)
-		{
-			while (digitalRead(PIN_SW1)==0);
-			sw1State=0;
-		}
-
-		if (digitalRead(PIN_SW1)==0)
-		{
-			sw1State=1;
-			menuItem=(menuItem+1)%3;
-		}
-
-		if (sw3State==1)
-		{
-			while (digitalRead(PIN_SW3)==0);
-			sw3State=0;
-		}
-
-		if (digitalRead(PIN_SW3)==0)
-		{
-			sw3State=1;
-			switch(menuItem)
-			{
-				case 0:
-					display.clearDisplay();
-					display.setTextSize(2);
-					display.setTextColor(WHITE);
-					display.setCursor(0,0);
-					display.println("Running");
-					display.setCursor(0,20);
-					display.println("Cal");
-					display.display();
-					calibrateEncoder();
-					break;
-				case 1:
-				{
-					display.clearDisplay();
-					display.setTextSize(2);
-					display.setTextColor(WHITE);
-					display.setCursor(0,0);
-					display.println("Testing");
-					display.setCursor(0,20);
-					display.println("Cal");
-					display.display();
-					int32_t error,x,y,m;
-					error=maxCalibrationError();
-					x=(error*100 *360)/ANGLE_STEPS;
-					m=x/100;
-					y=abs(x-(m*100));
-					display.clearDisplay();
-					display.setTextSize(2);
-					display.setTextColor(WHITE);
-					display.setCursor(0,0);
-					display.println("Error");
-
-					sprintf(str, "%02d.%02d deg",m,y);
-					display.setCursor(0,20);
-					display.println(str);
-					display.display();
-					while (digitalRead(PIN_SW3));
-					break;
-				}
-				case 2:
-					return;
-					break;
-
-			}
-
-		}
-
-	}
-
-}
-
- */
 
 void LCD::updateLCD(void)
 {
-	if (false == displayEnabled)
+	if (displayEnabled == false)
 	{
 		return;
 	}
@@ -599,7 +449,7 @@ void LCD::updateLCD(void)
 
 //--------------------------------------------
 // 
-void NZS_LCD::showCalibration(int current_step)
+void LCD::showCalibration(int current_step)
 {
 	char buf[30] = { 0 };
 	int x, y, r = LCD_HEIGHT/3;
@@ -635,7 +485,7 @@ void NZS_LCD::showCalibration(int current_step)
 //--------------------------------------------
 // Splash screen 128x64
 
-const uint8_t NZS_LCD::icon_splash_screen[] = {
+const uint8_t LCD::icon_splash_screen[] = {
 	0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
 	0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
 	0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,

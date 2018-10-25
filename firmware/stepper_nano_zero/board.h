@@ -30,23 +30,15 @@
 //#define NEMA17_SMART_STEPPER_3_21_2017
 #define NZ_STEPPER_2017
 
-<<<<<<< HEAD
-#define NZS_FAST_CAL	// define this to use 32k of flash for fast calibration table
-#define NZS_FAST_SINE	//uses 2048 extra bytes to implement faster sine tables
-=======
-
 #ifdef A5995_DRIVER
-#ifdef NEMA17_SMART_STEPPER_3_21_2017
-#error "Only NEMA17_SMART_STEPPER_3_21_2017 or A5595_DRIVER may be defined"
-#endif
+	#ifdef NEMA17_SMART_STEPPER_3_21_2017
+	#error "Only NEMA17_SMART_STEPPER_3_21_2017 or A5595_DRIVER may be defined"
+	#endif
 #endif
 
-#define NZS_FAST_CAL // define this to use 32k of flash for fast calibration table
-#define NZS_FAST_SINE //uses 2048 extra bytes to implement faster sine tables
->>>>>>> 5c4fd1bcf080d8b54497ce33e1f1b736a181eeae
-
+#define NZS_FAST_CAL		// define this to use 32k of flash for fast calibration table
+#define NZS_FAST_SINE		//uses 2048 extra bytes to implement faster sine tables
 #define NZS_AS5047_PIPELINE	//does a pipeline read of encoder, which is slightly faster
-
 #define NZS_CONTROL_LOOP_HZ (6000) //update rate of control loop
 
 
@@ -56,30 +48,25 @@
 //#define ENABLE_PHASE_PREDICTION //this enables prediction of phase at high velocity to increase motor speed
 //as of FW0.11 it is considered development only
 
-<<<<<<< HEAD
-#define VERSION "FW: 0.25x"		//this is what prints on LCD during splash screen
 #define BUILD_DATE __DATE__		//Build date, 11 char long
-=======
-#define VERSION "FW: 0.37" //this is what prints on LCD during splash screen
->>>>>>> 5c4fd1bcf080d8b54497ce33e1f1b736a181eeae
+#define VERSION "FW: 0.37"		//this is what prints on LCD during splash screen
 
 //Define this to allow command out serial port, else hardware serial is debug log
 //#define CMD_SERIAL_PORT
-
 #define SERIAL_BAUD (115200) //baud rate for the serial ports
 
 //This section is for using the step and dir pins as serial port
 // when the enable pin is inactive.
-#define USE_STEP_DIR_SERIAL
+//#define USE_STEP_DIR_SERIAL
 #define STEP_DIR_BAUD (19200) //this is the baud rate we will use
 
 // These are used as an attempt to use TC4 to count steps
 //  currently this is not working.
 //#define USE_NEW_STEP //define this to use new step method
-#define USE_TC_STEP //use timer counter for step pin
+#define USE_TC_STEP		//use timer counter for step pin
 
 #ifndef F_CPU
-#define F_CPU (48000000UL)
+	#define F_CPU (48000000UL)
 #endif
 
 /* TODO are flaged with TODO
@@ -210,11 +197,11 @@ typedef enum {
 
 //mechaduio and Arduino Zero has defined serial ports differently than NZS
 #ifdef MECHADUINO_HARDWARE
-#warning "Compiling source for Mechaduino NOT NZS"
-#define DISABLE_LCD
-#define Serial5 Serial 
+	#warning "Compiling source for Mechaduino NOT NZS"
+	#define DISABLE_LCD
+	#define Serial5 Serial 
 #else
- #define SerialUSB Serial
+	#define SerialUSB Serial
 #endif 
 
 #define PIN_STEP_INPUT  (0)		//D0, PA11
@@ -225,73 +212,61 @@ typedef enum {
 #define PIN_MISO        (22)	//
 
 #ifdef MECHADUINO_HARDWARE
-<<<<<<< HEAD
- #define PIN_ERROR 		(19)  //analogInputToDigitalPin(PIN_A5))
+	#define PIN_ERROR 		(19)  //analogInputToDigitalPin(PIN_A5))
 #elif defined NEMA17_SMART_STEPPER_3_21_2017
- #define PIN_SW1		(19)	//analogInputToDigitalPin(PIN_A5))
- #define PIN_SW3		(14)	//analogInputToDigitalPin(PIN_A0))
- #define PIN_SW4		(2)		//D2
- #define PIN_ENABLE		(10)
- #define PIN_ERROR		(3)
- #define PIN_VMOTOR		(15)
+	#define PIN_SW1			(19)	//analogInputToDigitalPin(PIN_A5))
+	#define PIN_SW3			(14)	//analogInputToDigitalPin(PIN_A0))
+	#define PIN_SW4			(2)		//D2
+	#define PIN_ENABLE		(10)
+	#define PIN_ERROR		(3)
+	#define PIN_VMOTOR		(15)
  
-#elif defined NZ_STEPPER_2017	//NZstepper hardware https://github.com/thmjpr/nano_stepper/tree/master/hardware
- #define PIN_SW1		(19)	//analogInputToDigitalPin(PIN_A5))
- #define PIN_SW3		(14)	//analogInputToDigitalPin(PIN_A0))
- #define PIN_SW4		(15)	//analogInputToDigitalPin(PIN_A1))
- #define PIN_ERROR		(10)
- #define PIN_ENABLE		(3)
- #define PIN_VMOTOR		PIN_B2		//Can try using PB02/AIN10/SWDclk as analog voltage input?			Could also change PA19 (D12) to be SW4 input
+#elif defined NZ_STEPPER_2017		//NZstepper hardware https://github.com/thmjpr/nano_stepper/tree/master/hardware
+	#define PIN_SW1			(19)	//analogInputToDigitalPin(PIN_A5))
+	#define PIN_SW3			(14)	//analogInputToDigitalPin(PIN_A0))
+	#define PIN_SW4			(15)	//analogInputToDigitalPin(PIN_A1))
+	#define PIN_ERROR		(10)
+	#define PIN_ENABLE		(3)
+	#define PIN_VMOTOR		PIN_B2		//Can try using PB02/AIN10/SWDclk as analog voltage input?			Could also change PA19 (D12) to be SW4 input
  
+#elif defined NEMA17_SMART_STEPPER_3_21_2017
+	#define PIN_SW1		(19)		//analogInputToDigitalPin(PIN_A5))
+	#define PIN_SW3		(14)		//analogInputToDigitalPin(PIN_A0))
+	#define PIN_SW4		(2)			//D2
+	#define PIN_ENABLE	(10)
+	#define PIN_ERROR	(3)
+	#define PIN_VMOTOR (A1)			//analog pin for the motor
+
 #else				//Nano zero stepper (version without reading motor voltage)
- #define PIN_SW1		(19)	//analogInputToDigitalPin(PIN_A5))
- #define PIN_SW3		(14)	//analogInputToDigitalPin(PIN_A0))
- #define PIN_SW4		(15)	//analogInputToDigitalPin(PIN_A1))
- #define PIN_ERROR		(10)
-=======
+	#define PIN_SW1			(19)	//analogInputToDigitalPin(PIN_A5))
+	#define PIN_SW3			(14)	//analogInputToDigitalPin(PIN_A0))
+	#define PIN_SW4			(15)	//analogInputToDigitalPin(PIN_A1))
+	#define PIN_ERROR		(10)
+#endif
+
 #ifdef USE_STEP_DIR_SERIAL
-#error "Step/Dir UART not supported on Mechaduino yet"
-#endif
-
-#define PIN_ERROR 		(19)  //analogInputToDigitalPin(PIN_A5))
-#else //not Mechaduino hardware
-#ifdef NEMA17_SMART_STEPPER_3_21_2017
-#define PIN_SW1		(19)//analogInputToDigitalPin(PIN_A5))
-#define PIN_SW3		(14)//analogInputToDigitalPin(PIN_A0))
-#define PIN_SW4		(2)//D2
-#define PIN_ENABLE	(10)
-#define PIN_ERROR	(3)
-
-#define PIN_VMOTOR (A1) //analog pin for the motor
-
-#else
-#define PIN_SW1		(19)//analogInputToDigitalPin(PIN_A5))
-#define PIN_SW3		(14)//analogInputToDigitalPin(PIN_A0))
-#define PIN_SW4		(15)//analogInputToDigitalPin(PIN_A1))
-#define PIN_ERROR		(10)
->>>>>>> 5c4fd1bcf080d8b54497ce33e1f1b736a181eeae
+	#error "Step/Dir UART not supported on Mechaduino yet"
 #endif
 
 #ifdef A5995_DRIVER
-#define PIN_ENABLE	(3)
+	#define PIN_ENABLE	(3)
 #endif
 
 #ifdef A5995_DRIVER
-#define PIN_ENABLE	(3)
+	#define PIN_ENABLE	(3)
 #endif
 
 #define PIN_SCL (21)
 #define PIN_SDA (20)
-#define PIN_USB_PWR (38) // this pin is high when usb is connected
+#define PIN_USB_PWR (38)		//this pin is high when usb is connected
+#define PIN_AS5047D_CS  (16)	//analogInputToDigitalPin(PIN_A2))
 
-#define PIN_AS5047D_CS  (16)//analogInputToDigitalPin(PIN_A2))
 #ifndef MECHADUINO_HARDWARE
-#define PIN_AS5047D_PWR	(11) //pull low to power on AS5047D
+	#define PIN_AS5047D_PWR	(11) //pull low to power on AS5047D
 #endif
 
 //These pins use the TIMER in the A4954 driver
 //changing the pin definitions here may require changes in the A4954.cpp file
-
 #define PIN_FET_IN1		(5) //PA15 TC3/WO[1] TCC0/WO[5]1
 #define PIN_FET_IN2		(6) //PA20 TC7/W0[0] TCC0/WO[6]2
 #define PIN_FET_IN3		(7) //PA21 TC7/WO[1] TCC0/WO[7]3
@@ -320,12 +295,12 @@ typedef enum {
 #define PIN_A5995_SLEEPn	(25) //RXLED
 
 #ifndef MECHADUINO_HARDWARE
-#define PIN_GREEN_LED  	(8)
+	#define PIN_GREEN_LED  	(8)
 #endif
 
 #ifdef NEMA_23_10A_HW
-#undef PIN_YELLOW_LED
-#define PIN_YELLOW_LED  	(26) //TXLED (PA27)
+	#undef PIN_YELLOW_LED
+	#define PIN_YELLOW_LED  	(26) //TXLED (PA27)
 #endif //NEMA_23_10A_HW
 
 
@@ -333,11 +308,13 @@ typedef enum {
 #define PIN_A4954_IN3		(5)
 #define PIN_A4954_IN4		(6)
 #define PIN_A4954_IN2		(7)
+
 #ifdef MECHADUINO_HARDWARE
-#define PIN_A4954_IN1		(8)
+	#define PIN_A4954_IN1		(8)
 #else
-#define PIN_A4954_IN1		(18) //analogInputToDigitalPin(PIN_A4))
+	#define PIN_A4954_IN1		(18) //analogInputToDigitalPin(PIN_A4))
 #endif
+
 #define PIN_A4954_VREF34	(4)
 #define PIN_A4954_VREF12	(9)
 
@@ -364,19 +341,13 @@ static void boardSetupPins(void)
 	pinMode(PIN_SW4, INPUT_PULLUP);
 #endif
 
-<<<<<<< HEAD
 #ifdef NZ_STEPPER_2017
-  pinMode(PIN_STEP_INPUT, INPUT_PULLDOWN);
-  pinMode(PIN_DIR_INPUT, INPUT_PULLDOWN);
+	pinMode(PIN_STEP_INPUT, INPUT_PULLDOWN);
+	pinMode(PIN_DIR_INPUT, INPUT_PULLDOWN);
 #else
 	pinMode(PIN_STEP_INPUT, INPUT);
 	pinMode(PIN_DIR_INPUT, INPUT);
 #endif
-
-=======
-	pinMode(PIN_STEP_INPUT, INPUT_PULLUP);
-	pinMode(PIN_DIR_INPUT, INPUT_PULLUP);
->>>>>>> 5c4fd1bcf080d8b54497ce33e1f1b736a181eeae
 
 #ifdef PIN_ENABLE
 	pinMode(PIN_ENABLE, INPUT_PULLUP); //default error pin as enable pin with pull up
@@ -392,8 +363,7 @@ static void boardSetupPins(void)
 	digitalWrite(PIN_AS5047D_PWR,HIGH);
 #endif
 
-
-
+	//Setup SPI bus
 	pinMode(PIN_MOSI,OUTPUT);
 	digitalWrite(PIN_MOSI,LOW);
 	pinMode(PIN_SCK,OUTPUT);
@@ -453,8 +423,32 @@ static void inline RED_LED(bool state)
 #define ABS(a) (((a)>(0))?(a):(-(a)))
 #define DIV(x,y) (((y)>(0))?((x)/(y)):(4294967295))
 #define SIGN(x)  (((x) > 0) - ((x) < 0))
-
 #define NVIC_IS_IRQ_ENABLED(x) (NVIC->ISER[0] & (1 << ((uint32_t)(x) & 0x1F)))!=0
+
+
+//Limit a signed integer to +/-limit number
+//positive number only for constraint
+static inline void constrain_pm(int32_t * number, int32_t constraint)
+{
+	if (*number > constraint)
+		*number = constraint;
+	else if (*number < -constraint)
+		*number = -constraint;
+	else
+		return;
+}
+
+static inline void constrain_pm(int64_t * number, int64_t constraint)
+{
+	if (*number > constraint)
+		*number = constraint;
+	else if (*number < -constraint)
+		*number = -constraint;
+	else
+		return;
+}
+
+
 
 static inline uint8_t  getPinMux(uint16_t ulPin)
 {
@@ -483,8 +477,7 @@ static inline void  setPinCfg(uint16_t ulPin, uint8_t val)
 	PORT->Group[g_APinDescription[ulPin].ulPort].PINCFG[g_APinDescription[ulPin].ulPin].reg=val;
 }
 
-
-
+//
 static inline void  setPinMux(uint16_t ulPin, uint8_t val)
 {
 	uint8_t temp;

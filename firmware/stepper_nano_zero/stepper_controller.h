@@ -39,17 +39,17 @@ typedef struct {
 
 //
  typedef __attribute__((packed, aligned(4))) struct {
-      int32_t microSecs;
-      int32_t desiredLoc;
-      int32_t actualLoc;
-      int32_t angle;
-      int32_t ma;
+	  int32_t microSecs;
+	  int32_t desiredLoc;
+	  int32_t actualLoc;
+	  int32_t angle;
+	  int32_t ma;
 } Location_t;
 
 //
 typedef struct {
-      int32_t angle;
-      int32_t ma;
+	  int32_t angle;
+	  int32_t ma;
 }Control_t;
 
 #define MAX_NUM_LOCATIONS (64) //maximum number of locations to buffer
@@ -57,7 +57,7 @@ typedef struct {
 //this scales the PID parameters from Flash to floating point to fixed point int32_t values
 #define CTRL_PID_SCALING (1024)
 
-class NZS_LCD;		//Forward declaration
+class LCD;		//Forward declaration
 
 class StepperCtrl 
 {
@@ -129,11 +129,6 @@ class StepperCtrl
 	public:
 		uint16_t getStartupEncoder(void) {return startUpEncoder;}
 		int32_t getLocation(Location_t *ptrLoc);
-<<<<<<< HEAD
-=======
-
-		//int32_t getSteps(void);
->>>>>>> 5c4fd1bcf080d8b54497ce33e1f1b736a181eeae
 		Angle getEncoderAngle(void);
 		void setAngle(int64_t loc);
 		int64_t getZeroAngleOffset(void);
@@ -148,7 +143,7 @@ class StepperCtrl
 		CalibrationTable calTable;
 		//void printData(void);
 
-		bool calibrateEncoder(NZS_LCD * lcd_d = nullptr); //do manual calibration of the encoder
+		bool calibrateEncoder(LCD * lcd_d = nullptr); //do manual calibration of the encoder
 		Angle maxCalibrationError(void); //measures the maximum calibration error as an angle
 
 		void moveToAbsAngle(int32_t a);
