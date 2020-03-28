@@ -2,6 +2,7 @@
 This is a modication of the nano zero stepper.
 
 Hardware changes
+
 REV1:
 - Board re-layout
 - Connectors optimized for simplicity/cost
