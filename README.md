@@ -3,7 +3,7 @@ This is a modication of the nano zero stepper.
 
 Hardware changes
 
-REV1:
+REV 1:
 - Board re-layout
 - Connectors optimized for simplicity/cost
 - Input protection added (fuse and TVS)
@@ -11,8 +11,8 @@ REV1:
 - Inputs are over/under voltage protected (high = 2~24V). No external supply connection needed (w/ level shifter). Tested to 90kHz step speed, limited by firmware. Not opto.
 - Error out open collector
 
-REV2:
-- Add motor voltage voltage divider (0 to 33V range)
+REV 2:
+- Add motor voltage monitor analog input (0 to 33V range)
 - Add NTC resistor to measure motor driver temperature
 - Remove JTAG header
 - Adjust switch footprint
