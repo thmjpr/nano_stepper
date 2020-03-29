@@ -35,11 +35,11 @@ CMD_STR(feedback, "enable or disable feedback controller, 'feedback 0' - disable
 CMD_STR(readpos, "reads the current angle as 16bit number, applies calibration if valid");
 CMD_STR(encoderdiag, "Prints encoder diagnostic")
 CMD_STR(spid, "with no arguments prints SIMPLE PID parameters, with arguments sets PID 'sPID Kp Ki Kd' "
-	"Where Kp,Ki,Kd are floating point numbers");
+			  "Where Kp,Ki,Kd are floating point numbers");
 CMD_STR(vpid, "with no arguments prints VELOCITY PID parameters, with arguments sets PID 'sPID Kp Ki Kd' "
-	"Where Kp,Ki,Kd are floating point numbers");
+			  "Where Kp,Ki,Kd are floating point numbers");
 CMD_STR(ppid, "with no arguments prints POSITIONAL PID parameters, with arguments sets PID 'sPID Kp Ki Kd' "
-	"Where Kp,Ki,Kd are floating point numbers");
+			  "Where Kp,Ki,Kd are floating point numbers");
 //CMD_STR(testringing ,"Steps motor at various currents and measures encoder");
 //CMD_STR(microsteperror ,"test error on microstepping")
 CMD_STR(dirpin, "with no arguments read dirpin setting, with argument sets direction pin rotation");
@@ -86,7 +86,7 @@ CMD_STR(getsteps, "returns number of steps seen")
 CMD_STR(debug, "enables debug commands out USB")
 //List of supported commands
 sCommand Cmds[] =
-{
+	{
 		COMMAND(help),
 		COMMAND(calibrate),
 		COMMAND(getcal),
@@ -114,7 +114,6 @@ sCommand Cmds[] =
 		COMMAND(homecurrent),
 		COMMAND(motorwiring),
 		COMMAND(stepsperrotation),
-
 		//COMMAND(sysparams),
 		//COMMAND(motorparams),
 		COMMAND(boot),
@@ -142,10 +141,10 @@ sCommand Cmds[] =
 		COMMAND(geterror),
 		COMMAND(getsteps),
 		COMMAND(debug),
-		{"",0,""}, //End of list signal
+		{"", 0, ""}, //End of list signal
 };
 
-static int debug_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int debug_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	uint32_t i;
 	if (argc >= 1)
@@ -155,7 +154,7 @@ static int debug_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 	}
 }
 
-static int getsteps_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int getsteps_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	int32_t s;
 	s = (int32_t)getSteps();
@@ -163,7 +162,7 @@ static int getsteps_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 	CommandPrintf(ptrUart, "steps %" PRIi32 "\n\r", s);
 	return 0;
 }
-static int geterror_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int geterror_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	float f;
 	char str[30];
@@ -173,12 +172,10 @@ static int geterror_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 	return 0;
 }
 
-
-static int errorpin_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int errorpin_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	if (argc == 1)
 	{
-
 		SystemParams_t params;
 
 		memcpy(&params, &NVM->SystemParams, sizeof(SystemParams_t));
@@ -186,14 +183,12 @@ static int errorpin_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 
 		nvmWriteSystemParms(params);
 		stepperCtrl.updateParamsFromNVM();
-
 	}
 	CommandPrintf(ptrUart, "error pin assert level is %d\n\r", NVM->SystemParams.errorLogic);
 	return 0;
-
 }
 
-static int pinread_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int pinread_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	uint8_t ret = 0;
 
@@ -237,10 +232,7 @@ static void errorPinISR(void)
 	SmartPlanner.stop(); //stop the planner
 }
 
-
-
-
-static int home_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int home_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	float rpm = 1;
 	float startDegrees = ANGLE_T0_DEGREES(stepperCtrl.getCurrentAngle());
@@ -277,13 +269,13 @@ static int home_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 }
 #endif
 
-static int reboot_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int reboot_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	NVIC_SystemReset();
 	return 0;
 }
 
-static int setpos_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int setpos_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	if (argc >= 1)
 	{
@@ -297,13 +289,13 @@ static int setpos_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 	return 1;
 }
 
-static int eepromwrite_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int eepromwrite_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	eepromFlush();
 	return 0;
 }
 
-static int eepromerror_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int eepromerror_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	Angle a;
 	uint16_t error;
@@ -338,7 +330,7 @@ static int eepromerror_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 	return 0;
 }
 
-static int eepromsetloc_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int eepromsetloc_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	Angle a;
 	int64_t deg;
@@ -350,7 +342,7 @@ static int eepromsetloc_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 	return 0;
 }
 
-static int eepromloc_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int eepromloc_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	Angle a;
 	int64_t deg;
@@ -365,25 +357,25 @@ static int eepromloc_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 	return 0;
 }
 
-static int looptime_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int looptime_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	CommandPrintf(ptrUart, "%dus", stepperCtrl.getLoopTime());
 	return 0;
 }
 
-static int setzero_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int setzero_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	stepperCtrl.setZero();
 	return 0;
 }
 
-static int stop_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int stop_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	SmartPlanner.stop();
 	return 0;
 }
 
-static int data_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int data_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	if (argc == 1)
 	{
@@ -396,9 +388,7 @@ static int data_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 	return 1;
 }
 
-
-
-static int stepsperrotation_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int stepsperrotation_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 
 	if (argc == 0)
@@ -425,20 +415,18 @@ static int stepsperrotation_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 			nvmWriteMotorParms(motorParams);
 			stepperCtrl.updateParamsFromNVM();
 
-
 			x = NVM->motorParams.fullStepsPerRotation;
 			CommandPrintf(ptrUart, "full steps per rotation %u\n\r", x);
 			CommandPrintf(ptrUart, "please power cycle board\n\r");
 			return 0;
 		}
-
 	}
 	CommandPrintf(ptrUart, "usage 'stepsperrotation 200' or 'stepsperrotation 400'\n\r");
 
 	return 1;
 }
 
-static int motorwiring_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int motorwiring_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 
 	if (argc == 0)
@@ -469,15 +457,13 @@ static int motorwiring_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 			CommandPrintf(ptrUart, "please power cycle board\n\r");
 			return 0;
 		}
-
 	}
 	CommandPrintf(ptrUart, "usage 'motorwiring 0' or 'motorwiring 1'\n\r");
 
 	return 1;
 }
 
-
-static int homeangledelay_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int homeangledelay_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	float f;
 	char str[30];
@@ -493,7 +479,6 @@ static int homeangledelay_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 
 		nvmWriteSystemParms(params);
 		stepperCtrl.updateParamsFromNVM();
-
 	}
 
 	f = ANGLE_T0_DEGREES(NVM->SystemParams.homeAngleDelay);
@@ -502,7 +487,7 @@ static int homeangledelay_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 	return 0;
 }
 
-static int homepin_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int homepin_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	int32_t x;
 	if (argc == 0)
@@ -524,11 +509,9 @@ static int homepin_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 		nvmWriteSystemParms(params);
 		stepperCtrl.updateParamsFromNVM();
 
-
 		x = NVM->SystemParams.homePin;
 		CommandPrintf(ptrUart, "home pin %d\n\r", x);
 		return 0;
-
 	}
 
 	CommandPrintf(ptrUart, "use 'sethomepin 17' to set maximum home pin to A3");
@@ -536,8 +519,7 @@ static int homepin_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 	return 1;
 }
 
-
-static int homecurrent_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int homecurrent_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	uint32_t x, y;
 	if (argc == 0)
@@ -560,12 +542,10 @@ static int homecurrent_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 		nvmWriteMotorParms(motorParams);
 		stepperCtrl.updateParamsFromNVM();
 
-
 		x = NVM->motorParams.homeMa;
 		y = NVM->motorParams.homeHoldMa;
 		CommandPrintf(ptrUart, "current %umA, %umA\n\r", x, y);
 		return 0;
-
 	}
 	if (argc == 2)
 	{
@@ -581,19 +561,17 @@ static int homecurrent_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 		nvmWriteMotorParms(motorParams);
 		stepperCtrl.updateParamsFromNVM();
 
-
 		x = NVM->motorParams.homeMa;
 		y = NVM->motorParams.homeHoldMa;
 		CommandPrintf(ptrUart, "current %umA, %umA\n\r", x, y);
 		return 0;
-
 	}
 	CommandPrintf(ptrUart, "use 'homecurrent 1000 500' to set maximum home current to 1.0A and hold to 500ma");
 
 	return 1;
 }
 
-static int holdcurrent_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int holdcurrent_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	if (argc == 0)
 	{
@@ -623,8 +601,7 @@ static int holdcurrent_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 	return 1;
 }
 
-
-static int maxcurrent_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int maxcurrent_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	if (argc == 0)
 	{
@@ -646,7 +623,6 @@ static int maxcurrent_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 		nvmWriteMotorParms(motorParams);
 		stepperCtrl.updateParamsFromNVM();
 
-
 		x = NVM->motorParams.currentMa;
 		CommandPrintf(ptrUart, "max current %u mA\n\r", x);
 		return 0;
@@ -657,9 +633,7 @@ static int maxcurrent_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 	return 1;
 }
 
-
-
-static int ctrlmode_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int ctrlmode_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	bool ret;
 	if (argc == 0)
@@ -720,14 +694,13 @@ static int ctrlmode_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 			}
 			return 1;
 		}
-
 	}
 	CommandPrintf(ptrUart, "use 'ctrlmode [0 .. 4]' to set control mode");
 
 	return 1;
 }
 
-static int errorlimit_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int errorlimit_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	bool ret;
 	char str[20];
@@ -761,8 +734,7 @@ static int errorlimit_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 	return 1;
 }
 
-
-static int dirpin_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int dirpin_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	bool ret;
 
@@ -805,7 +777,6 @@ static int dirpin_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 				CommandPrintf(ptrUart, "dirpin CCW(%d)\n\r", (uint32_t)NVM->SystemParams.dirPinRotation);
 			}
 			return 0;
-
 		}
 	}
 	CommandPrintf(ptrUart, "used 'dirpin 0' for CW rotation and 'dirpin 1' for CCW");
@@ -814,7 +785,7 @@ static int dirpin_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 }
 
 #ifndef PIN_ENABLE
-static int errorpinmode_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int errorpinmode_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	bool ret;
 
@@ -874,7 +845,6 @@ static int errorpinmode_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 				CommandPrintf(ptrUart, "Error pin -  Bidi error(%d)\n\r", (uint32_t)NVM->SystemParams.errorPinMode);
 			}
 			return 0;
-
 		}
 	}
 	CommandPrintf(ptrUart, "use 'errorpinmode 0' for enable active high, 'errorpinmode 1' for enable active low  and 'errorpinmode 2' for error output");
@@ -883,7 +853,7 @@ static int errorpinmode_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 }
 
 #else
-static int enablepinmode_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int enablepinmode_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	bool ret;
 
@@ -944,13 +914,13 @@ static int enablepinmode_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 }
 #endif
 
-static int factoryreset_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int factoryreset_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	nvmErase(); //erase all of the flash
 	NVIC_SystemReset();
 }
 
-static int velocity_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int velocity_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	int64_t x;
 
@@ -958,7 +928,7 @@ static int velocity_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 	{
 		float rpm;
 		rpm = atof(argv[0]);
-		x = (int64_t)(DIVIDE_WITH_ROUND(rpm*ANGLE_STEPS, 60)); //divide with r
+		x = (int64_t)(DIVIDE_WITH_ROUND(rpm * ANGLE_STEPS, 60)); //divide with r
 		stepperCtrl.setVelocity(x);
 	}
 	int64_t y;
@@ -979,7 +949,7 @@ static int velocity_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 //	return 0;
 //}
 
-static int move_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int move_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	int32_t x, ma;
 	//CommandPrintf(ptrUart, "Move %d",argc);
@@ -1016,7 +986,8 @@ static int move_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 
 		pos = ANGLE_T0_DEGREES(stepperCtrl.getCurrentAngle());
 		y = pos;
-		if (y > f) a = -a;
+		if (y > f)
+			a = -a;
 
 		SerialUSB.println(f);
 		SerialUSB.println(y);
@@ -1044,13 +1015,12 @@ static int move_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 	return 0;
 }
 
-static int boot_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int boot_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	initiateReset(250);
 }
 
-
-static int vpid_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int vpid_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	CommandPrintf(ptrUart, "args %d\n\r", argc);
 	if (0 == argc)
@@ -1095,7 +1065,7 @@ static int vpid_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 	return 0;
 }
 
-static int ppid_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int ppid_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	if (0 == argc)
 	{
@@ -1139,7 +1109,7 @@ static int ppid_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 	return 0;
 }
 
-static int spid_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int spid_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	if (0 == argc)
 	{
@@ -1183,7 +1153,7 @@ static int spid_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 	return 0;
 }
 
-static int encoderdiag_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int encoderdiag_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	char str[512];
 	stepperCtrl.encoderDiagnostics(str);
@@ -1191,7 +1161,7 @@ static int encoderdiag_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 	return 0;
 }
 
-static int readpos_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int readpos_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	float pos;
 	int32_t x, y;
@@ -1203,7 +1173,7 @@ static int readpos_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 	return 0;
 }
 
-static int feedback_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int feedback_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	if (0 == argc)
 	{
@@ -1214,7 +1184,7 @@ static int feedback_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 	return 0;
 }
 
-static int step_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int step_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	if (argc == 0)
 	{
@@ -1241,8 +1211,7 @@ static int step_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 	return 0;
 }
 
-
-static int microsteps_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int microsteps_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	bool ret;
 
@@ -1267,7 +1236,6 @@ static int microsteps_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 		stepperCtrl.updateParamsFromNVM();
 
 		CommandPrintf(ptrUart, "microsteps %d\n\r", NVM->SystemParams.microsteps);
-
 	}
 	else
 	{
@@ -1278,9 +1246,8 @@ static int microsteps_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 	return 0;
 }
 
-
 // print out the help strings for the commands
-static int help_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int help_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	sCommand cmd_list;
 	int i;
@@ -1301,26 +1268,26 @@ static int help_cmd(sCmdUart *ptrUart, int argc, char * argv[])
 	return 0;
 }
 
-static int getcal_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int getcal_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	stepperCtrl.calTable.printCalTable();
 	return 0;
 }
 
-static int calibrate_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int calibrate_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	stepperCtrl.calibrateEncoder();
 	CommandPrintf(ptrUart, "Calibration DONE!\n\r");
 	return 0;
 }
 
-static int testcal_cmd(sCmdUart *ptrUart, int argc, char * argv[])
+static int testcal_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	Angle a;
 	int32_t x;
 
 	a = stepperCtrl.maxCalibrationError();
-	x = (uint16_t)a*(int32_t)360000L / (int32_t)ANGLE_MAX;
+	x = (uint16_t)a * (int32_t)360000L / (int32_t)ANGLE_MAX;
 
 	CommandPrintf(ptrUart, "Max error is %d.%03d degrees\n\r", x / 1000, abs(x) % 1000);
 	return 0;
@@ -1358,7 +1325,6 @@ uint8_t putch_hw(char data)
 	return Serial5.write((uint8_t)data);
 }
 
-
 uint8_t kbhit_step_dir(void)
 {
 	return Serial1.available();
@@ -1372,8 +1338,6 @@ uint8_t putch_step_dir(char data)
 {
 	return Serial1.write((uint8_t)data);
 }
-
-
 
 void commandsInit(void)
 {
@@ -1402,7 +1366,6 @@ int commandsProcess(void)
 		CommandProcess(&HostUart, Cmds, ' ', COMMANDS_PROMPT);
 	}
 #endif //USE_STEP_DIR_SERIAL
-
 
 #ifdef CMD_SERIAL_PORT
 	CommandProcess(&SerialUart, Cmds, ' ', COMMANDS_PROMPT);

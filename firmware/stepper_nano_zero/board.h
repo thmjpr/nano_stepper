@@ -24,11 +24,8 @@
 //uncomment the following if the board uses the A5995 driver (NEMA 23 3.2A boards)
 //#define A5995_DRIVER
 
-//The March 21 2017 NEMA 17 Smart Stepper has changed some pin outs
-// A1 was changed to read motor voltage, hence SW4 is now using D4
-// comment out this next line if using the older hardware
-//#define NEMA17_SMART_STEPPER_3_21_2017
-#define NZ_STEPPER_2017
+//Board typ used
+#define NZ_STEPPER_REV2
 
 #ifdef A5995_DRIVER
 	#ifdef NEMA17_SMART_STEPPER_3_21_2017
@@ -42,7 +39,7 @@
 #define NZS_CONTROL_LOOP_HZ (6000) //update rate of control loop
 
 
-#define NZS_LCD_ABSOULTE_ANGLE  //define this to show angle from zero in positive and negative direction
+#define NZS_LCD_ABSOLUTE_ANGLE  //define this to show angle from zero in positive and negative direction
 // for example 2 rotations from start will be angle of 720 degrees
 
 //#define ENABLE_PHASE_PREDICTION //this enables prediction of phase at high velocity to increase motor speed
@@ -204,8 +201,8 @@ typedef enum {
 	#define SerialUSB Serial
 #endif 
 
-#define PIN_STEP_INPUT  (0)		//D0, PA11
-#define PIN_DIR_INPUT   (1)		//D10, PA10
+#define PIN_STEP_INPUT  (0)		//D0 = PA11
+#define PIN_DIR_INPUT   (1)		//D10 = PA10
 
 #define PIN_MOSI        (23)	//
 #define PIN_SCK         (24)	//
@@ -220,22 +217,24 @@ typedef enum {
 	#define PIN_ENABLE		(10)
 	#define PIN_ERROR		(3)
 	#define PIN_VMOTOR		(15)
- 
-#elif defined NZ_STEPPER_2017		//NZstepper hardware https://github.com/thmjpr/nano_stepper/tree/master/hardware
-	#define PIN_SW1			(19)	//analogInputToDigitalPin(PIN_A5))
-	#define PIN_SW3			(14)	//analogInputToDigitalPin(PIN_A0))
-	#define PIN_SW4			(15)	//analogInputToDigitalPin(PIN_A1))
-	#define PIN_ERROR		(10)
-	#define PIN_ENABLE		(3)
-	#define PIN_VMOTOR		PIN_B2		//Can try using PB02/AIN10/SWDclk as analog voltage input?			Could also change PA19 (D12) to be SW4 input
- 
-#elif defined NEMA17_SMART_STEPPER_3_21_2017
-	#define PIN_SW1		(19)		//analogInputToDigitalPin(PIN_A5))
-	#define PIN_SW3		(14)		//analogInputToDigitalPin(PIN_A0))
-	#define PIN_SW4		(2)			//D2
-	#define PIN_ENABLE	(10)
-	#define PIN_ERROR	(3)
-	#define PIN_VMOTOR (A1)			//analog pin for the motor
+
+#elif defined NZ_STEPPER_REV1 //NZstepper hardware https://github.com/thmjpr/nano_stepper/tree/master/hardware
+	#define PIN_SW1 (19)		  //analogInputToDigitalPin(PIN_A5))
+	#define PIN_SW3 (14)		  //analogInputToDigitalPin(PIN_A0))
+	#define PIN_SW2 (15)		  //analogInputToDigitalPin(PIN_A1))
+	#define PIN_ERROR (10)
+
+	#define PIN_ENABLE (3)
+	#define PIN_VMOTOR PIN_B2 //Can try using PB02/AIN10/SWDclk as analog voltage input?			Could also change PA19 (D12) to be SW4 input
+
+#elif defined NZ_STEPPER_REV2 //REV2 hardware
+	#define PIN_SW1 (19)		  //A5 = PB02 = 19
+	#define PIN_SW3 (14)		  //A0 = PA02 = 14
+	#define PIN_SW2 (15)		  //A1 = PB08 = 15
+	#define PIN_TEMPERATURE (2)	  //D2 = PA14 - NTC temperature near motor driver
+	#define PIN_ERROR (3)		  //D3 = PA09
+	#define PIN_ENABLE (10)		  //D10 = PA18
+	#define PIN_VMOTOR (17)	      //A3 = PA04 = 17 - 10k/1k voltage divider from input voltage
 
 #else				//Nano zero stepper (version without reading motor voltage)
 	#define PIN_SW1			(19)	//analogInputToDigitalPin(PIN_A5))
@@ -259,7 +258,7 @@ typedef enum {
 #define PIN_SCL (21)
 #define PIN_SDA (20)
 #define PIN_USB_PWR (38)		//this pin is high when usb is connected
-#define PIN_AS5047D_CS  (16)	//analogInputToDigitalPin(PIN_A2))
+#define PIN_AS5047D_CS  (16)	//
 
 #ifndef MECHADUINO_HARDWARE
 	#define PIN_AS5047D_PWR	(11) //pull low to power on AS5047D
@@ -271,21 +270,21 @@ typedef enum {
 #define PIN_FET_IN2		(6) //PA20 TC7/W0[0] TCC0/WO[6]2
 #define PIN_FET_IN3		(7) //PA21 TC7/WO[1] TCC0/WO[7]3
 #define PIN_FET_IN4		(2) //PA14 TC3/W0[0] TCC0/WO[4] 0
-#define PIN_FET_VREF1	(4)
-#define PIN_FET_VREF2	(3)
-#define PIN_FET_ENABLE	(12)
+#define PIN_FET_VREF1	(4) //PA08
+//#define PIN_FET_VREF2	(3) //PA09
+#define PIN_FET_ENABLE	(12) //
 
 //current sense pin from each H-bridge
-#define ISENSE_FET_A	 (17) //analogInputToDigitalPin(PIN_A3)
-#define ISENSE_FET_B	 (8)
+#define ISENSE_FET_A	 (17) //PA04
+#define ISENSE_FET_B	 (8)  //PA06
 
 //Comparators analog inputs
-//#define COMP_FET_A		 (18)//analogInputToDigitalPin(PIN_A4))
-//#define COMP_FET_B		 (9)
+//#define COMP_FET_A		 (18) 	//PA05
+//#define COMP_FET_B		 (9)	//PA07
 
 //these are the pins used on the A5995 driver
 #define PIN_A5995_ENABLE1 	(2) //PA14
-#define PIN_A5995_ENABLE2 	(18) //PA05  analogInputToDigitalPin(PIN_A4))
+#define PIN_A5995_ENABLE2 	(18) //PA05  PIN_A4))
 #define PIN_A5995_MODE1 	(8) //PA06 TCC1 WO[0]
 #define PIN_A5995_MODE2 	(7)	//PA21 TCC0 WO[4] //3
 #define PIN_A5995_PHASE1 	(6)	//PA20 TCC0 WO[6] //2
@@ -295,7 +294,7 @@ typedef enum {
 #define PIN_A5995_SLEEPn	(25) //RXLED
 
 #ifndef MECHADUINO_HARDWARE
-	#define PIN_GREEN_LED  	(8)
+	#define PIN_GREEN_LED  	(8)		//PA06
 #endif
 
 #ifdef NEMA_23_10A_HW
@@ -303,20 +302,19 @@ typedef enum {
 	#define PIN_YELLOW_LED  	(26) //TXLED (PA27)
 #endif //NEMA_23_10A_HW
 
-
-#define PIN_RED_LED		    (13)
-#define PIN_A4954_IN3		(5)
-#define PIN_A4954_IN4		(6)
-#define PIN_A4954_IN2		(7)
+#define PIN_RED_LED		    (13)	//PA17
+#define PIN_A4954_IN3		(5)		//PA15
+#define PIN_A4954_IN4		(6)		//PA20
+#define PIN_A4954_IN2		(7)		//PA21
 
 #ifdef MECHADUINO_HARDWARE
-	#define PIN_A4954_IN1		(8)
+	#define PIN_A4954_IN1	(8)
 #else
-	#define PIN_A4954_IN1		(18) //analogInputToDigitalPin(PIN_A4))
+	#define PIN_A4954_IN1	(18) //PA05
 #endif
 
-#define PIN_A4954_VREF34	(4)
-#define PIN_A4954_VREF12	(9)
+#define PIN_A4954_VREF34	(4)	//PA08
+#define PIN_A4954_VREF12	(9) //PA07
 
 //Here are some useful macros
 #define DIVIDE_WITH_ROUND(x,y)  ((x+y/2)/y)
@@ -324,9 +322,7 @@ typedef enum {
 #define GPIO_LOW(pin) {PORT->Group[g_APinDescription[(pin)].ulPort].OUTCLR.reg = (1ul << g_APinDescription[(pin)].ulPin);}
 #define GPIO_HIGH(pin) {PORT->Group[g_APinDescription[(pin)].ulPort].OUTSET.reg = (1ul << g_APinDescription[(pin)].ulPin);}
 #define GPIO_OUTPUT(pin) {PORT->Group[g_APinDescription[(pin)].ulPort].PINCFG[g_APinDescription[(pin)].ulPin].reg &=~(uint8_t)(PORT_PINCFG_INEN) ;  PORT->Group[g_APinDescription[(pin)].ulPort].DIRSET.reg = (uint32_t)(1<<g_APinDescription[(pin)].ulPin) ;}
-
 #define PIN_GPIO_OUTPUT(pin) {PORT->Group[g_APinDescription[(pin)].ulPort].PINCFG[g_APinDescription[(pin)].ulPin].reg &=~(uint8_t)(PORT_PINCFG_INEN | PORT_PINCFG_PMUXEN) ;  PORT->Group[g_APinDescription[(pin)].ulPort].DIRSET.reg = (uint32_t)(1<<g_APinDescription[(pin)].ulPin) ;}
-
 #define PIN_GPIO(pin) {PORT->Group[g_APinDescription[(pin)].ulPort].PINCFG[g_APinDescription[(pin)].ulPin].reg &=~(uint8_t)(PORT_PINCFG_INEN | PORT_PINCFG_PMUXEN);}
 #define GPIO_READ(ulPin) {(PORT->Group[g_APinDescription[ulPin].ulPort].IN.reg & (1ul << g_APinDescription[ulPin].ulPin)) != 0}
 #define PIN_PERIPH(pin) {PORT->Group[g_APinDescription[(pin)].ulPort].PINCFG[g_APinDescription[(pin)].ulPin].reg |= PORT_PINCFG_PMUXEN;}
@@ -338,10 +334,10 @@ static void boardSetupPins(void)
 #ifdef PIN_SW1
 	pinMode(PIN_SW1, INPUT_PULLUP);
 	pinMode(PIN_SW3, INPUT_PULLUP);
-	pinMode(PIN_SW4, INPUT_PULLUP);
+	pinMode(PIN_SW2, INPUT_PULLUP);
 #endif
 
-#ifdef NZ_STEPPER_2017
+#if defined(NZ_STEPPER_REV1) || defined(NZ_STEPPER_REV2)
 	pinMode(PIN_STEP_INPUT, INPUT_PULLDOWN);
 	pinMode(PIN_DIR_INPUT, INPUT_PULLDOWN);
 #else
@@ -354,55 +350,70 @@ static void boardSetupPins(void)
 #endif
 
 	pinMode(PIN_ERROR, INPUT_PULLUP); //default error pin as enable pin with pull up
-	pinMode(PIN_AS5047D_CS,OUTPUT);
-	digitalWrite(PIN_AS5047D_CS,LOW); //pull CS LOW by default (chip powered off)
+	pinMode(PIN_AS5047D_CS, OUTPUT);
+	digitalWrite(PIN_AS5047D_CS, LOW); //pull CS LOW by default (chip powered off)
 
 	//turn the AS5047D off by default
 #ifdef PIN_AS5047D_PWR
-	pinMode(PIN_AS5047D_PWR,OUTPUT);
-	digitalWrite(PIN_AS5047D_PWR,HIGH);
+	pinMode(PIN_AS5047D_PWR, OUTPUT);
+	digitalWrite(PIN_AS5047D_PWR, HIGH);
 #endif
 
 	//Setup SPI bus
-	pinMode(PIN_MOSI,OUTPUT);
-	digitalWrite(PIN_MOSI,LOW);
-	pinMode(PIN_SCK,OUTPUT);
-	digitalWrite(PIN_SCK,LOW);
-	pinMode(PIN_MISO,INPUT);
+	pinMode(PIN_MOSI, OUTPUT);
+	digitalWrite(PIN_MOSI, LOW);
+	pinMode(PIN_SCK, OUTPUT);
+	digitalWrite(PIN_SCK, LOW);
+	pinMode(PIN_MISO, INPUT);
 
 	//setup the A4954 pins
-	digitalWrite(PIN_A4954_IN3,LOW);
-	pinMode(PIN_A4954_IN3,OUTPUT);
-	digitalWrite(PIN_A4954_IN4,LOW);
-	pinMode(PIN_A4954_IN4,OUTPUT);
-	digitalWrite(PIN_A4954_IN2,LOW);
-	pinMode(PIN_A4954_IN2,OUTPUT);
-	digitalWrite(PIN_A4954_IN1,LOW);
-	pinMode(PIN_A4954_IN1,OUTPUT);
+	digitalWrite(PIN_A4954_IN3, LOW);
+	pinMode(PIN_A4954_IN3, OUTPUT);
+	digitalWrite(PIN_A4954_IN4, LOW);
+	pinMode(PIN_A4954_IN4, OUTPUT);
+	digitalWrite(PIN_A4954_IN2, LOW);
+	pinMode(PIN_A4954_IN2, OUTPUT);
+	digitalWrite(PIN_A4954_IN1, LOW);
+	pinMode(PIN_A4954_IN1, OUTPUT);
 
 	//setup the PWM for current on the A4954, set for low current
-	digitalWrite(PIN_A4954_VREF12,LOW);
-	digitalWrite(PIN_A4954_VREF34,LOW);
+	digitalWrite(PIN_A4954_VREF12, LOW);
+	digitalWrite(PIN_A4954_VREF34, LOW);
 	pinMode(PIN_A4954_VREF34, OUTPUT);
 	pinMode(PIN_A4954_VREF12, OUTPUT);
-	
-	pinMode(PIN_RED_LED,OUTPUT);
+	pinMode(PIN_RED_LED, OUTPUT);
 
-#ifdef PIN_GREEN_LED		//Green LED for "Activity"	
+#ifdef PIN_GREEN_LED //Green LED for "Activity"
 	pinMode(PIN_GREEN_LED, OUTPUT);
 	digitalWrite(PIN_GREEN_LED, HIGH);
 #endif
 }
 
-#ifdef NEMA17_SMART_STEPPER_3_21_2017
+#if defined(NZ_STEPPER_REV1) || defined(NZ_STEPPER_REV2) || defined(NEMA17_SMART_STEPPER_3_21_2017)
 static float GetMotorVoltage(void)
 {
 	uint32_t x;
 	float f;
-	//the motor voltage is 1/101 of the adc
-	x = analogRead(PIN_VMOTOR);  //this should be a 10bit value mapped to 3.3V
-	f = (float)x*3.3/1024.0*101.0;
+
+	x = analogRead(PIN_VMOTOR);						  //this should be a 10bit value mapped to 3.3V
+	f = (float)x * 3.3 / 1024.0 * ((10.0 + 1.0) / 1); //10k/1k resistor divider
 	return f;
+}
+
+
+//Read temperature near motor chip
+//not verified calculations
+//Can compare to on chip temperature, apparently needs calibration
+static int32_t getTemperature(void)
+{
+	float ntc;
+	ntc = analogRead(PIN_TEMPERATURE);
+	ntc = log(10000.0 * ((1024.0 / ntc - 1)));
+	//         =log(10000.0/(1024.0/RawADC-1)) // for pull-up configuration
+	ntc = 1 / (0.001129148 + (0.000234125 + (0.0000000876741 * ntc * ntc)) * ntc);
+	ntc = ntc - 273.15;			  // Convert Kelvin to Celcius
+
+	return (int32_t)ntc;
 }
 #endif
 
@@ -448,23 +459,21 @@ static inline void constrain_pm(int64_t * number, int64_t constraint)
 		return;
 }
 
-
-
-static inline uint8_t  getPinMux(uint16_t ulPin)
+static inline uint8_t getPinMux(uint16_t ulPin)
 {
 	uint8_t temp;
-	if ((ulPin & 0x01)==0)
+	if ((ulPin & 0x01) == 0)
 	{
-		temp = (PORT->Group[g_APinDescription[ulPin].ulPort].PMUX[g_APinDescription[ulPin].ulPin >> 1].reg) & PORT_PMUX_PMUXE( 0xF ) ;
-	}else
+		temp = (PORT->Group[g_APinDescription[ulPin].ulPort].PMUX[g_APinDescription[ulPin].ulPin >> 1].reg) & PORT_PMUX_PMUXE(0xF);
+	}
+	else
 	{
-		temp = (PORT->Group[g_APinDescription[ulPin].ulPort].PMUX[g_APinDescription[ulPin].ulPin >> 1].reg)>>4 & 0xF;
+		temp = (PORT->Group[g_APinDescription[ulPin].ulPort].PMUX[g_APinDescription[ulPin].ulPin >> 1].reg) >> 4 & 0xF;
 	}
 	return temp;
 }
 
-
-static inline uint8_t  getPinCfg(uint16_t ulPin)
+static inline uint8_t getPinCfg(uint16_t ulPin)
 {
 	uint8_t temp;
 
@@ -472,51 +481,51 @@ static inline uint8_t  getPinCfg(uint16_t ulPin)
 	return temp;
 }
 
-static inline void  setPinCfg(uint16_t ulPin, uint8_t val)
+static inline void setPinCfg(uint16_t ulPin, uint8_t val)
 {
-	PORT->Group[g_APinDescription[ulPin].ulPort].PINCFG[g_APinDescription[ulPin].ulPin].reg=val;
+	PORT->Group[g_APinDescription[ulPin].ulPort].PINCFG[g_APinDescription[ulPin].ulPin].reg = val;
 }
 
 //
-static inline void  setPinMux(uint16_t ulPin, uint8_t val)
+static inline void setPinMux(uint16_t ulPin, uint8_t val)
 {
 	uint8_t temp;
 	temp = (PORT->Group[g_APinDescription[ulPin].ulPort].PMUX[g_APinDescription[ulPin].ulPin >> 1].reg);
-	if ((ulPin & 0x01)==0)
+	if ((ulPin & 0x01) == 0)
 	{
 		//if an even pin
-		temp =  (temp & 0xF0) | (val & 0x0F);
-	}else
-	{
-		temp =  (temp & 0x0F) | ((val<<4) & 0x0F);
+		temp = (temp & 0xF0) | (val & 0x0F);
 	}
-	PORT->Group[g_APinDescription[ulPin].ulPort].PMUX[g_APinDescription[ulPin].ulPin >> 1].reg=temp;
-	PORT->Group[g_APinDescription[ulPin].ulPort].PINCFG[g_APinDescription[ulPin].ulPin].reg |= PORT_PINCFG_PMUXEN ; // Enable port mux
+	else
+	{
+		temp = (temp & 0x0F) | ((val << 4) & 0x0F);
+	}
+	PORT->Group[g_APinDescription[ulPin].ulPort].PMUX[g_APinDescription[ulPin].ulPin >> 1].reg = temp;
+	PORT->Group[g_APinDescription[ulPin].ulPort].PINCFG[g_APinDescription[ulPin].ulPin].reg |= PORT_PINCFG_PMUXEN; // Enable port mux
 }
 
-static inline void SET_PIN_PERHERIAL(uint16_t ulPin,EPioType ulPeripheral)
+static inline void SET_PIN_PERHERIAL(uint16_t ulPin, EPioType ulPeripheral)
 {
-	if ( g_APinDescription[ulPin].ulPin & 1 ) // is pin odd?
+	if (g_APinDescription[ulPin].ulPin & 1) // is pin odd?
 	{
-		uint32_t temp ;
+		uint32_t temp;
 
 		// Get whole current setup for both odd and even pins and remove odd one
-		temp = (PORT->Group[g_APinDescription[ulPin].ulPort].PMUX[g_APinDescription[ulPin].ulPin >> 1].reg) & PORT_PMUX_PMUXE( 0xF ) ;
+		temp = (PORT->Group[g_APinDescription[ulPin].ulPort].PMUX[g_APinDescription[ulPin].ulPin >> 1].reg) & PORT_PMUX_PMUXE(0xF);
 		// Set new muxing
-		PORT->Group[g_APinDescription[ulPin].ulPort].PMUX[g_APinDescription[ulPin].ulPin >> 1].reg = temp|PORT_PMUX_PMUXO( ulPeripheral ) ;
+		PORT->Group[g_APinDescription[ulPin].ulPort].PMUX[g_APinDescription[ulPin].ulPin >> 1].reg = temp | PORT_PMUX_PMUXO(ulPeripheral);
 		// Enable port mux
-		PORT->Group[g_APinDescription[ulPin].ulPort].PINCFG[g_APinDescription[ulPin].ulPin].reg |= PORT_PINCFG_PMUXEN ;
+		PORT->Group[g_APinDescription[ulPin].ulPort].PINCFG[g_APinDescription[ulPin].ulPin].reg |= PORT_PINCFG_PMUXEN;
 	}
 	else // even pin
 	{
-		uint32_t temp ;
+		uint32_t temp;
 
-		temp = (PORT->Group[g_APinDescription[ulPin].ulPort].PMUX[g_APinDescription[ulPin].ulPin >> 1].reg) & PORT_PMUX_PMUXO( 0xF ) ;
-		PORT->Group[g_APinDescription[ulPin].ulPort].PMUX[g_APinDescription[ulPin].ulPin >> 1].reg = temp|PORT_PMUX_PMUXE( ulPeripheral ) ;
-		PORT->Group[g_APinDescription[ulPin].ulPort].PINCFG[g_APinDescription[ulPin].ulPin].reg |= PORT_PINCFG_PMUXEN ; // Enable port mux
+		temp = (PORT->Group[g_APinDescription[ulPin].ulPort].PMUX[g_APinDescription[ulPin].ulPin >> 1].reg) & PORT_PMUX_PMUXO(0xF);
+		PORT->Group[g_APinDescription[ulPin].ulPort].PMUX[g_APinDescription[ulPin].ulPin >> 1].reg = temp | PORT_PMUX_PMUXE(ulPeripheral);
+		PORT->Group[g_APinDescription[ulPin].ulPort].PINCFG[g_APinDescription[ulPin].ulPin].reg |= PORT_PINCFG_PMUXEN; // Enable port mux
 	}
 }
-
 
 //the Arduino delay function requires interrupts to work.
 // if interrupts are disabled use the delayMicroseconds which is a spin loop
@@ -527,17 +536,17 @@ static inline void DelayMs(uint32_t ms)
 	/* Returns 0 if they are enabled, or non-zero if disabled */
 	prim = __get_PRIMASK();
 
-	if (prim==0)
+	if (prim == 0)
 	{
 		delay(ms);
-	}else
+	}
+	else
 	{
-		while(ms)
+		while (ms--)
 		{
 			delayMicroseconds(1000);
-			ms--;
 		}
 	}
 }
 
-#endif//__BOARD_H__
+#endif //__BOARD_H__

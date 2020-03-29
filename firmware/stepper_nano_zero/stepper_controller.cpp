@@ -557,23 +557,26 @@ stepCtrlError_t StepperCtrl::begin(void)
 	LOG("start stepper driver");
 	stepperDriver.begin();
 
-#ifdef NEMA17_SMART_STEPPER_3_21_2017
+#if defined(NEMA17_SMART_STEPPER_3_21_2017) || defined(NZ_STEPPER_REV1) || defined(NZ_STEPPER_REV2)
 	if (NVM->motorParams.parametersValid)
 	{
 		//lets read the motor voltage
-		if (GetMotorVoltage() < 5)
+		if (GetMotorVoltage() < 5.0)
 		{
 			//if we have less than 5 volts the motor is not powered
 			uint32_t x;
-			x = (uint32_t)(GetMotorVoltage()*1000.0);
-			ERROR("Motor voltage is %" PRId32 "mV", x); //default printf does not support floating point numbers
+			x = (uint32_t)GetMotorVoltage();
+			ERROR("Motor voltage is %" PRId32 "V", x);	//default printf does not support floating point numbers
 			ERROR("Motor may not have power");
 			return STEPCTRL_NO_POWER;
 		}
+
+		int32_t x = getTemperature();
+		LOG("Driver temperature = %03d", x);
+
 		bool state = enterCriticalSection();
 		setLocationFromEncoder(); //measure new starting point
 		exitCriticalSection(state);
-
 	}
 	else
 	{

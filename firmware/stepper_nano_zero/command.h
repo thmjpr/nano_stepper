@@ -86,7 +86,8 @@
 #define MAX_STRING 255
 //const char ANSI_UP[]= {ASCII_ESC,'[','A',0};
 
-typedef struct {
+typedef struct
+{
 	uint8_t (*kbhit)(void);
 	uint8_t (*getch)(void);
 	uint8_t (*putch)(char data);
@@ -98,46 +99,49 @@ typedef struct {
 	uint8_t histIndex;
 	uint8_t buffIndex;
 	uint8_t lastChar;
-}sCmdUart;
+} sCmdUart;
 
-
-#define COMMAND(NAME)  { NAME ## _str, NAME ## _cmd, NAME ## _help}
-
+#define COMMAND(NAME)                       \
+	{                                       \
+		NAME##_str, NAME##_cmd, NAME##_help \
+	}
 
 #ifdef PGM_P //check and see if the PGM_P is defined for the AVR
 
 //If so then we use the strings in flash not SRAM
-#define CMD_STR(NAME,STR) static const char NAME ## _help[] PROGMEM = STR;  static const char NAME ## _str[] PROGMEM = #NAME;  static int NAME ##_cmd(sCmdUart *ptrUart,int, char **);
+#define CMD_STR(NAME, STR)                          \
+	static const char NAME##_help[] PROGMEM = STR;  \
+	static const char NAME##_str[] PROGMEM = #NAME; \
+	static int NAME##_cmd(sCmdUart *ptrUart, int, char **);
 //Command structure
 typedef struct
 {
 	PGM_P name;
-	int (*function) (sCmdUart *ptrUart,int, char **);
+	int (*function)(sCmdUart *ptrUart, int, char **);
 	PGM_P help;
 } sCommand;
 int CommandPrintf(sCmdUart *ptrUart, const char *fmt, ...);
 
 #else
 
-#define CMD_STR(NAME,STR)  static char NAME ## _help[] = STR;   static char NAME ## _str[] = #NAME;  static int NAME ##_cmd(sCmdUart *ptrUart,int, char **);
+#define CMD_STR(NAME, STR)            \
+	static char NAME##_help[] = STR;  \
+	static char NAME##_str[] = #NAME; \
+	static int NAME##_cmd(sCmdUart *ptrUart, int, char **);
 
 //Command structure
 typedef struct
 {
 	char *name;
-	int (*function) (sCmdUart *ptrUart,int, char **);
+	int (*function)(sCmdUart *ptrUart, int, char **);
 	char *help;
 } sCommand;
 
 int CommandPrintf(sCmdUart *ptrUart, char *fmt, ...);
 #endif
 
-
-int CommandInit(sCmdUart *ptrUart, uint8_t (*kbhit)(void), uint8_t (*getch)(void),uint8_t (*putch)(char data),uint8_t (*puts)(uint8_t *buffer, uint8_t size));
-unsigned int CommandParse(sCmdUart *ptrUart,sCommand *ptrCmds, char *str, char delimitor);
-int CommandProcess(sCmdUart *ptrUart,sCommand *ptrCmds, char delimitor, char *cmdPrompt);
-
-
+int CommandInit(sCmdUart *ptrUart, uint8_t (*kbhit)(void), uint8_t (*getch)(void), uint8_t (*putch)(char data), uint8_t (*puts)(uint8_t *buffer, uint8_t size));
+unsigned int CommandParse(sCmdUart *ptrUart, sCommand *ptrCmds, char *str, char delimitor);
+int CommandProcess(sCmdUart *ptrUart, sCommand *ptrCmds, char delimitor, char *cmdPrompt);
 
 #endif
-

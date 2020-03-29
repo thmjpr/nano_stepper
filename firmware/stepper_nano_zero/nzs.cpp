@@ -30,6 +30,28 @@ int32_t dataEnabled = 0;
 StepperCtrl stepperCtrl;
 LCD Lcd;
 
+int menuInfo(int argc, char *argv[])
+{
+	if(!Lcd.displayEn()){return 0;}
+
+	int temp, volt;
+	char str[3][20];
+
+	temp = getTemperature();
+	volt = GetMotorVoltage();
+
+	//Maybe show the values for 2s then go back?
+
+	sprintf(str[1], "v = %03d", volt);
+	sprintf(str[2], "t = %03d", temp);
+	sprintf(str[3], "x = ");
+
+	str[0][10] = '\0';
+	str[1][10] = '\0';
+	str[2][10] = '\0';
+	Lcd.lcdShow(str[0], str[1], str[2]);
+}
+
 int menuCalibrate(int argc, char *argv[])
 {
 	stepperCtrl.calibrateEncoder(&Lcd);
@@ -122,20 +144,7 @@ static  options_t currentOptions[]{
 		{"1700"},
 		{"1800"},
 		{"1900"},
-		{"2000"},
-		{"2100"},
-		{"2200"},
-		{"2300"},
-		{"2400"},
-		{"2500"},
-		{"2600"},
-		{"2700"},
-		{"2800"},
-		{"2900"},
-		{"3000"},
-		{"3100"},
-		{"3200"},
-		{"3300"},
+		{"2000"},		//Max of A4954
 		{""},
 };
 
@@ -338,17 +347,19 @@ int dirPin(int argc, char *argv[])
 }
 
 static  menuItem_t MenuMain[]{
+		{"Information", menuInfo, NULL},
 		{"Calibrate", menuCalibrate, NULL},
 		{"Test Cal", menuTestCal, NULL},
 		//		{"Mtr steps", motorSteps,stepOptions}, NOT GOOD for user to call this
 		{"Motor mA", motorCurrent, currentOptions},
 		{"Hold mA", motorHoldCurrent, currentOptions},
 		{"Microstep", microsteps, microstepOptions},
-		{"Ctlr Mode", controlLoop, controlLoopOptions}, //this may not be good for user to call
-#ifndef PIN_ENABLE
-		{"Error Pin", errorPin, errorPinOptions},
-#else
+		{"Ctlr Mode", controlLoop, controlLoopOptions}, 	//this may not be good for user to call
+#ifdef PIN_ENABLE
 		{"EnablePin", enablePin, errorPinOptions},
+#endif
+#ifndef PIN_ERROR
+		{"Error Pin", errorPin, errorPinOptions},		**FF whats up with error pin
 #endif
 		{"Dir Pin", dirPin, dirPinOptions},
 		{ "", NULL}

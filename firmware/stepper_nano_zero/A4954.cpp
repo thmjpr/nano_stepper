@@ -296,17 +296,17 @@ int32_t A4954::move(int32_t stepAngle, uint32_t mA)
 	}
 
 	//scale sine result by current(mA)
-	dacSin = ((int32_t)mA*(int64_t)abs(sin)) / SINE_MAX;
+	dacSin = ((int32_t)mA * (int64_t)abs(sin)) / SINE_MAX;
 
 	//scale cosine result by current(mA)
-	dacCos = ((int32_t)mA*(int64_t)abs(cos)) / SINE_MAX;
+	dacCos = ((int32_t)mA * (int64_t)abs(cos)) / SINE_MAX;
 
 	//	if (i==0)
 	//	{
 	//		WARNING("dacs are %d %d",dacSin,dacCos);
 	//	}
 
-		//convert value into DAC scaled to 3300mA max
+	//convert value into DAC scaled to 3300mA max
 	dacCos = (int32_t)((int64_t)dacCos*(DAC_MAX)) / 3300;
 
 	//convert value into DAC scaled to 3300mA max

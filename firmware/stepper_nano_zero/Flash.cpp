@@ -12,7 +12,8 @@
 #include "Flash.h"
 #include "syslog.h"
 
-bool flashInit(void){
+bool flashInit(void)
+{
 	if (NVMCTRL->PARAM.bit.PSZ != 3)
 	{
 		ERROR("FLASH PAGE SIZE is not 64 bytes");
@@ -21,23 +22,25 @@ bool flashInit(void){
 	return true;
 }
 
-
 static void erase(const volatile void *flash_ptr)
 {
 	NVMCTRL->ADDR.reg = ((uint32_t)flash_ptr) / 2;
 	NVMCTRL->CTRLA.reg = NVMCTRL_CTRLA_CMDEX_KEY | NVMCTRL_CTRLA_CMD_ER;
-	while (!NVMCTRL->INTFLAG.bit.READY) { }
+	while (!NVMCTRL->INTFLAG.bit.READY)
+	{
+	}
 }
 
 bool flashErase(const volatile void *flash_ptr, uint32_t size)
 {
 	const uint8_t *ptr = (const uint8_t *)flash_ptr;
-	while (size > FLASH_ROW_SIZE) {
+	while (size > FLASH_ROW_SIZE)
+	{
 		erase(ptr);
 		ptr += FLASH_ROW_SIZE;
 		size -= FLASH_ROW_SIZE;
 	}
-	if (size>0)
+	if (size > 0)
 	{
 		erase(ptr);
 	}
@@ -58,8 +61,7 @@ static inline uint32_t read_unaligned_uint32(const void *data)
 	return res.u32;
 }
 
-
-void flashWrite(const volatile void *flash_ptr,const void *data, uint32_t size)
+void flashWrite(const volatile void *flash_ptr, const void *data, uint32_t size)
 {
 	uint32_t *ptrPage;
 	uint8_t *destPtr;
@@ -68,59 +70,56 @@ void flashWrite(const volatile void *flash_ptr,const void *data, uint32_t size)
 	__attribute__((__aligned__(4))) uint8_t buffer[FLASH_ROW_SIZE];
 	uint32_t offset;
 
-	destPtr=(uint8_t *)flash_ptr;
-	srcPtr=(uint8_t *)data;
+	destPtr = (uint8_t *)flash_ptr;
+	srcPtr = (uint8_t *)data;
 
 	LOG("flash write called");
-	while(size>0)
+	while (size > 0)
 	{
-		uint32_t i,j;
+		uint32_t i, j;
 
 		//calculate the maximum number of bytes we can write in page
-		offset=((uint32_t)destPtr)%(FLASH_ROW_SIZE); //offset into page
-		bytesInBlock=FLASH_ROW_SIZE-offset; //this is how many bytes we need to overwrite in this page
+		offset = ((uint32_t)destPtr) % (FLASH_ROW_SIZE); //offset into page
+		bytesInBlock = FLASH_ROW_SIZE - offset;			 //this is how many bytes we need to overwrite in this page
 
-		LOG("offset %d, bytesInBlock %d size %d", offset, bytesInBlock,size);
+		LOG("offset %d, bytesInBlock %d size %d", offset, bytesInBlock, size);
 		//get pointer to start of page
-		ptrPage=(uint32_t *) ((((uint32_t)destPtr)/(FLASH_ROW_SIZE)) * FLASH_ROW_SIZE);
+		ptrPage = (uint32_t *)((((uint32_t)destPtr) / (FLASH_ROW_SIZE)) * FLASH_ROW_SIZE);
 
-		LOG("pointer to page %d(0x%08x) %d",(uint32_t)ptrPage,(uint32_t)ptrPage,destPtr);
+		LOG("pointer to page %d(0x%08x) %d", (uint32_t)ptrPage, (uint32_t)ptrPage, destPtr);
 
 		//fill page buffer with data from flash
-		memcpy(buffer,ptrPage,FLASH_ROW_SIZE);
+		memcpy(buffer, ptrPage, FLASH_ROW_SIZE);
 
 		//now fill buffer with new data that needs changing
-		i=bytesInBlock;
-		if (size<i)
+		i = bytesInBlock;
+		if (size < i)
 		{
-			i=size;
+			i = size;
 		}
-		LOG("changing %d bytes",i);
-		memcpy(&buffer[offset],srcPtr,i);
+		LOG("changing %d bytes", i);
+		memcpy(&buffer[offset], srcPtr, i);
 
 		//erase page
-		flashErase(ptrPage,FLASH_ROW_SIZE);
+		flashErase(ptrPage, FLASH_ROW_SIZE);
 		//write new data to flash
-		flashWritePage(ptrPage,buffer,FLASH_ROW_SIZE);
+		flashWritePage(ptrPage, buffer, FLASH_ROW_SIZE);
 
-		uint32_t *ptr=(uint32_t *)buffer;
-		for (j=0; j<FLASH_ROW_SIZE/4; j++)
+		uint32_t *ptr = (uint32_t *)buffer;
+		for (j = 0; j < FLASH_ROW_SIZE / 4; j++)
 		{
 			if (*ptrPage != *ptr)
 			{
-				ERROR("write failed on byte %d %x %x",j,*ptrPage, *ptr);
+				ERROR("write failed on byte %d %x %x", j, *ptrPage, *ptr);
 			}
 			ptrPage++;
 			ptr++;
 		}
 
-
-		size=size-i; //decrease number of bytes to write
-		srcPtr+=i; //increase pointer to next bytes to read
-		destPtr+=i; //increment destination pointer
+		size = size - i; //decrease number of bytes to write
+		srcPtr += i;	 //increase pointer to next bytes to read
+		destPtr += i;	//increment destination pointer
 	}
-
-
 }
 
 void flashWritePage(const volatile void *flash_ptr, const void *data, uint32_t size)
@@ -131,7 +130,7 @@ void flashWritePage(const volatile void *flash_ptr, const void *data, uint32_t s
 	volatile uint32_t *dst_addr = (volatile uint32_t *)flash_ptr;
 	const uint8_t *src_addr = (uint8_t *)data;
 
-	if (0 != ((uint32_t)flash_ptr)%(FLASH_PAGE_SIZE))
+	if (0 != ((uint32_t)flash_ptr) % (FLASH_PAGE_SIZE))
 	{
 		ERROR("Flash page write must be on boundry");
 		return;
@@ -145,11 +144,13 @@ void flashWritePage(const volatile void *flash_ptr, const void *data, uint32_t s
 	{
 		// Execute "PBC" Page Buffer Clear
 		NVMCTRL->CTRLA.reg = NVMCTRL_CTRLA_CMDEX_KEY | NVMCTRL_CTRLA_CMD_PBC;
-		while (NVMCTRL->INTFLAG.bit.READY == 0) { }
+		while (NVMCTRL->INTFLAG.bit.READY == 0)
+		{
+		}
 
 		// Fill page buffer
 		uint32_t i;
-		for (i=0; i<(FLASH_PAGE_SIZE/4) && size; i++) //we write 4 bytes at a time
+		for (i = 0; i < (FLASH_PAGE_SIZE / 4) && size; i++) //we write 4 bytes at a time
 		{
 			*dst_addr = read_unaligned_uint32(src_addr);
 			src_addr += 4;
@@ -159,8 +160,8 @@ void flashWritePage(const volatile void *flash_ptr, const void *data, uint32_t s
 
 		// Execute "WP" Write Page
 		NVMCTRL->CTRLA.reg = NVMCTRL_CTRLA_CMDEX_KEY | NVMCTRL_CTRLA_CMD_WP;
-		while (NVMCTRL->INTFLAG.bit.READY == 0) { }
+		while (NVMCTRL->INTFLAG.bit.READY == 0)
+		{
+		}
 	}
-
-
 }

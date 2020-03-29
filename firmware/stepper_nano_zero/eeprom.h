@@ -17,16 +17,16 @@
  * 	for the SAMD21G18A this allows a minimual 200k writes, but typically 1200k
  */
 
-typedef enum {
-	EEPROM_OK =0,
-	EEPROM_FAILED=1,
-	EEPROM_CORRUPT=2,
+typedef enum
+{
+	EEPROM_OK = 0,
+	EEPROM_FAILED = 1,
+	EEPROM_CORRUPT = 2,
 } eepromError_t;
-
 
 eepromError_t eepromInit(void);
 int eepromWriteCache(uint8_t *ptrData, uint32_t size); //returns number bytes written to cache
-eepromError_t eepromFlush(void); //flush the cache to flash memory
-int eepromRead(uint8_t *ptrData, uint32_t size); //returns number of bytes actually read, whcih could be less than size requested
+eepromError_t eepromFlush(void);					   //flush the cache to flash memory
+int eepromRead(uint8_t *ptrData, uint32_t size);	   //returns number of bytes actually read, whcih could be less than size requested
 
 #endif /* EEPROM_H_ */

@@ -24,8 +24,6 @@
 #error "SINE_STEPS must be 4x of Micro steps for the move function"
 #endif
 
-
-
 /*
  *  When it comes to the stepper driver if we use angles
  *  we will always have a rounding error. For example
@@ -43,8 +41,8 @@ class A4954
 {
 private:
 	uint32_t lastStepMicros; // time in microseconds that last step happened
-	bool forwardRotation=true;
-	volatile bool enabled=true;
+	bool forwardRotation = true;
+	volatile bool enabled = true;
 
 public:
 	void begin(void);
@@ -52,13 +50,11 @@ public:
 	//moves motor where the modulo of A4954_NUM_MICROSTEPS is a full step.
 	int32_t move(int32_t stepAngle, uint32_t mA);
 
-	uint32_t microsSinceStep(void) {return micros()-lastStepMicros;};
-	void setRotationDirection(bool forward) {forwardRotation=forward;};
+	uint32_t microsSinceStep(void) { return micros() - lastStepMicros; };
+	void setRotationDirection(bool forward) { forwardRotation = forward; };
 
 	void enable(bool enable);
 	void limitCurrent(uint8_t percent); //higher more current
 };
-
-
 
 #endif //__A4954__H__

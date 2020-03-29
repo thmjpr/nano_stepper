@@ -23,8 +23,8 @@ void LCD::begin(StepperCtrl *ptrsCtrl)
 {
 #ifndef MECHADUINO_HARDWARE
 	pinMode(PIN_SW1, INPUT_PULLUP);
+	pinMode(PIN_SW2, INPUT_PULLUP);
 	pinMode(PIN_SW3, INPUT_PULLUP);
-	pinMode(PIN_SW4, INPUT_PULLUP);
 #endif
 	buttonState = 0;
 
@@ -62,19 +62,16 @@ void LCD::begin(StepperCtrl *ptrsCtrl)
 	}
 	if (displayEnabled == false)
 	{
-		WARNING("NO display found, LCD will not be used");
+		WARNING("No display found, LCD will not be used");
 	}
 
 	Wire.setClock(800000);
 }
 
-
-void __attribute__ ((optimize("Ofast"))) LCD::lcdShow(const char *line1, const char *line2,const char *line3)
+void __attribute__((optimize("Ofast"))) LCD::lcdShow(const char *line1, const char *line2, const char *line3)
 {
-	if (displayEnabled == false)
-	{
-		return;
-	}
+	skip_when_no_display();
+
 	display.clearDisplay();
 	display.setTextSize(2);
 	display.setTextColor(WHITE);
@@ -91,10 +88,8 @@ void __attribute__ ((optimize("Ofast"))) LCD::lcdShow(const char *line1, const c
 //Logo splash screen
 void LCD::showSplash(void)
 {
-	if (displayEnabled == false)
-	{
-		return;
-	}
+	skip_when_no_display();
+
 	display.clearDisplay();
 	display.drawBitmap(0, 0, icon_splash_screen, 128, 64, WHITE);		//Show logo
 	display.setCursor(60, 55);
@@ -107,10 +102,8 @@ void LCD::showSplash(void)
 //
 void LCD::setMenu(menuItem_t *pMenu)
 {
-	if (displayEnabled == false)
-	{
-		return;
-	}
+	skip_when_no_display();
+
 	ptrMenu = pMenu;
 	menuIndex = 0;
 
@@ -124,13 +117,10 @@ void LCD::setMenu(menuItem_t *pMenu)
 //Show configuration options
 void LCD::showOptions(void)
 {
-	int32_t i,j;
-	char str[3][26] = {0};
+	skip_when_no_display();
 
-	if (displayEnabled == false)
-	{
-		return;
-	}
+	int32_t i, j;
+	char str[3][26] = {0};
 
 	i = optionIndex;
 	j = 0;
@@ -155,15 +145,11 @@ void LCD::showOptions(void)
 
 void __attribute__ ((optimize("Ofast"))) LCD::showMenu(void)
 {
-	int32_t i,j;
+	int32_t i = menuIndex, j = 0;
 	char str[3][26] = {0};
-	if (displayEnabled == false)
-	{
-		return;
-	}
 
-	i = menuIndex;
-	j = 0;
+	skip_when_no_display();
+
 	while((ptrMenu[i].func != NULL) && (j < 3))
 	{
 		if (i == menuIndex)
@@ -196,10 +182,7 @@ void __attribute__ ((optimize("Ofast"))) LCD::showMenu(void)
 
 void __attribute__ ((optimize("Ofast"))) LCD::updateMenu(void)
 {
-	if (displayEnabled == false)
-	{
-		return;
-	}
+	if (displayEnabled == false){return;}
 
 	if (ptrOptions != NULL)
 	{
@@ -293,26 +276,24 @@ void LCD::forceMenuActive(void)
 
 void __attribute__((optimize("Ofast")))LCD::process(void)
 {
-	if (displayEnabled == false)
-	{
-		return;
-	}
+	if (displayEnabled == false){return;}
 
 	if (false == menuActive || ptrMenu == NULL)
 	{
 		updateLCD();
-	}else
+	}
+	else
 	{
 		updateMenu();
 	}
 
-	if (digitalRead(PIN_SW4) == 0 && (buttonState & 0x04) == 0)
+	if (digitalRead(PIN_SW2) == 0 && (buttonState & 0x04) == 0)
 	{
 		buttonState |= 0x04;
 		menuActive = !menuActive;
 	}
 
-	if (digitalRead(PIN_SW4))
+	if (digitalRead(PIN_SW2))
 	{
 		buttonState &= ~0x04;
 	}
@@ -321,18 +302,14 @@ void __attribute__((optimize("Ofast")))LCD::process(void)
 
 void LCD::updateLCD(void)
 {
-	if (displayEnabled == false)
-	{
-		return;
-	}
+	skip_when_no_display();
 
 	char str[3][25];
 	static int highRPM = 0;
-	int32_t y,z,err;
+	int32_t y, z, err;
 
-	static int64_t lastAngle,deg;
-	static int32_t RPM = 0;
-	static int32_t lasttime = 0;
+	static int64_t lastAngle, deg;
+	static int32_t RPM = 0, lasttime = 0;
 
 	bool state;
 	static int32_t dt = 40;
@@ -340,9 +317,9 @@ void LCD::updateLCD(void)
 
 	static bool rpmDone = false;
 
-	if ((millis()-t0) > 500)
+	if ((millis() - t0) > 500)
 	{
-		int32_t x,d;
+		int32_t x, d;
 
 		//do first half of RPM measurement
 		if (!rpmDone)
@@ -362,7 +339,7 @@ void LCD::updateLCD(void)
 			y = millis() - lasttime;
 			err = ptrStepperCtrl->getLoopError();
 			t0 = millis();
-			d = (int64_t)(lastAngle-deg);
+			d = (int64_t)(lastAngle - deg);
 			d = abs(d);
 			x = 0;
 
@@ -373,75 +350,72 @@ void LCD::updateLCD(void)
 
 			lastAngle = deg;
 			RPM = (int32_t)x; //(7*RPM+x)/8; //average RPMs
-			if (RPM>500)
+			if (RPM > 500)
 			{
 				dt = 10;
 			}
-			if (RPM<100)
+			else //if (RPM < 100)
 			{
 				dt = 100;
 			}
+
 			str[0][0] = '\0';
 			//LOG("RPMs is %d, %d, %d",(int32_t)x,(int32_t)d,(int32_t)y);
-			switch(ptrStepperCtrl->getControlMode())
+			switch (ptrStepperCtrl->getControlMode())
 			{
-				case CTRL_SIMPLE:
-					sprintf(str[0], "%3dRPM simp",RPM);
-					break;
+			case CTRL_SIMPLE:
+				sprintf(str[0], "%03dRPM simp", RPM);
+				break;
 
-				case CTRL_POS_PID:
-					sprintf(str[0], "%3dRPM pPID",RPM);
-					break;
+			case CTRL_POS_PID:
+				sprintf(str[0], "%03dRPM pPID", RPM);
+				break;
 
-				case CTRL_POS_VELOCITY_PID:
-					sprintf(str[0], "%3dRPM vPID",RPM);
-					break;
+			case CTRL_POS_VELOCITY_PID:
+				sprintf(str[0], "%03dRPM vPID", RPM);
+				break;
 
-				case CTRL_OPEN:
-					sprintf(str[0], "%3dRPM open",RPM);
-					break;
-				case CTRL_OFF:
-					sprintf(str[0], "%3dRPM off",RPM);
-					break;
-				default:
-					sprintf(str[0], "error %u",ptrStepperCtrl->getControlMode());
-					break;
+			case CTRL_OPEN:
+				sprintf(str[0], "%03dRPM open", RPM);
+				break;
+			case CTRL_OFF:
+				sprintf(str[0], "%03dRPM off", RPM);
+				break;
+			default:
+				sprintf(str[0], "error %u", ptrStepperCtrl->getControlMode());
+				break;
 			}
 
-
-			err = (err*360*100)/(int32_t)ANGLE_STEPS;
+			err = (err * 360 * 100) / (int32_t)ANGLE_STEPS;
 			//LOG("error is %d %d %d",err,(int32_t)ptrStepperCtrl->getCurrentLocation(),(int32_t)ptrStepperCtrl->getDesiredLocation());
-			z = (err)/100;
-			y = abs(err-(z*100));
+			z = (err) / 100;
+			y = abs(err - (z * 100));
 
-			sprintf(str[1],"%01d.%02d err", z,y);
+			sprintf(str[1], "%01d.%02d err", z, y);
 			deg = ptrStepperCtrl->getDesiredAngle();
 
-#ifndef NZS_LCD_ABSOULTE_ANGLE
+#ifndef NZS_LCD_ABSOLUTE_ANGLE
 			deg = deg & ANGLE_MAX; //limit to 360 degrees
 #endif
 
-			deg = (deg*360*10)/(int32_t)ANGLE_STEPS;
-			int K = 0;
+			deg = (deg * 360 * 10) / (int32_t)ANGLE_STEPS;
+
+			// if too large to display
 			if (abs(deg) > 9999)
 			{
-				K = 1;
-				deg = deg/1000;
+				deg = deg / 1000;
+				x = deg / 10;
+				y = abs(deg - (x * 10));
+				sprintf(str[2], "%03d.%01uKdeg", x, y);
 			}
 
-			x = (deg)/10;
-			y = abs(deg-(x*10));
-
-			if (K==1)
+			else
 			{
-				sprintf(str[2],"%03d.%01uKdeg", x, y);
-			}else
-			{
-				sprintf(str[2],"%03d.%01udeg", x, y);
+				x = deg / 10;
+				y = abs(deg - (x * 10));
+				sprintf(str[2], "%03d.%01udeg", x, y);
 			}
-			str[0][10]='\0';
-			str[1][10]='\0';
-			str[2][10]='\0';
+
 			lcdShow(str[0], str[1], str[2]);
 		}
 	}

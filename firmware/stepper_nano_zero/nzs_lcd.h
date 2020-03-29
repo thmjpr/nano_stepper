@@ -29,12 +29,17 @@
 #define LCD_WIDTH	128
 #define LCD_HEIGHT	64
 
+#define skip_when_no_display() if(displayEnabled == false){return;}
+
+#define NAME_LEN 		15		//Max function name
+#define LCD_MAX_CHAR	11		//Max characters on LCD line
+
 typedef struct {
-	char str[15];
+	char str[NAME_LEN];
 } options_t;
 
 typedef struct {
-	char str[15];
+	char str[NAME_LEN];
 
 	//only one of the following should be not null
 	int (*func)(int argc, char *argv[]);
@@ -63,6 +68,7 @@ class LCD
 		void showOptions(void);
 
 	public:
+		bool displayEn() const { return displayEnabled; }
 		void forceMenuActive(void);
 		void setMenu(menuItem_t *pMenu);
 		void begin(StepperCtrl *ptrStepperCtrl);	//sets up the LCD
