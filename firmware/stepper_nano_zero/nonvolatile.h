@@ -38,9 +38,10 @@ typedef struct {
 	int32_t errorLimit;    //error limit before error pin asserts 65536==360degrees
 	ErrorPinMode_t errorPinMode;  //is error pin used for enable, error, or bidirectional
 	feedbackCtrl_t controllerMode; //feedback mode for the controller
-	int32_t homePin; //if greater than zero this is the pin we use trigger home current settings
-	bool errorLogic; //if high and error will be high on output pin
-	int32_t homeAngleDelay; //the angle to delay before switching to lower homing current
+	int32_t homePin; 				//if greater than zero this is the pin we use trigger home current settings
+	bool errorLogic; 				//if high and error will be high on output pin
+	bool enableLogic;				//if input high, enabled
+	int32_t homeAngleDelay; 		//the angle to delay before switching to lower homing current
 	bool parametersValid;
 } SystemParams_t;
 

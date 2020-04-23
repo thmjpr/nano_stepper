@@ -14,7 +14,7 @@
 #include "sine.h"
 
 #define A5995_NUM_MICROSTEPS (256)
-
+#define DAC_MAX (0x01FFL)
 
 //prevent someone for making a mistake with the code
 #if ((A5995_NUM_MICROSTEPS*4) != SINE_STEPS)

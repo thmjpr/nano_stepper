@@ -110,7 +110,6 @@ void StepperCtrl::updateParamsFromNVM(void)
 	{
 		memcpy((void *)&systemParams, (void *)&NVM->SystemParams, sizeof(systemParams));
 		LOG("Home pin %d", systemParams.homePin);
-
 	}
 	else
 	{
@@ -129,8 +128,7 @@ void StepperCtrl::updateParamsFromNVM(void)
 	// handler for this will change the pin to be an output.
 	// for bidirection error it has to handle input/output it's self as well.
 	// This is not the cleanest way to handle this...
-	// TODO implement this cleaner?
-	pinMode(PIN_ERROR, INPUT_PULLUP); //we have input pin
+	pinMode(PIN_ERROR, INPUT_PULLUP); //we have input pin **FF
 
 	if (NVM->motorParams.parametersValid)
 	{
@@ -141,7 +139,7 @@ void StepperCtrl::updateParamsFromNVM(void)
 		//MotorParams_t Params;
 		motorParams.fullStepsPerRotation = 200;
 		motorParams.currentHoldMa = 500;
-		motorParams.currentMa = 1500;
+		motorParams.currentMa = 900;
 		motorParams.homeHoldMa = 200;
 		motorParams.homeMa = 800;
 		motorParams.motorWiring = true;
@@ -1014,13 +1012,10 @@ bool StepperCtrl::vpidFeedback(int64_t desiredLoc, int64_t currentLoc, Control_t
 bool StepperCtrl::pidFeedback(int64_t desiredLoc, int64_t currentLoc, Control_t *ptrCtrl)
 {
 	static int count = 0;
-	static int32_t maxError = 0;
-	static int32_t lastError = 0;
-	static int32_t Iterm = 0;
-	int32_t ma;
-	int64_t y;
+	static int32_t maxError = 0, lastError = 0, Iterm = 0;
 	int32_t fullStep = ANGLE_STEPS / motorParams.fullStepsPerRotation;
-	int32_t dy;
+	int32_t dy, ma;
+	int64_t y;
 
 	y = currentLoc;
 	y = y + calculatePhasePrediction(currentLoc);		//add in phase prediction

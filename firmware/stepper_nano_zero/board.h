@@ -14,25 +14,13 @@
 
 #include <Arduino.h>
 
-//uncomment this if you are using the Mechaduino hardware
-//#define MECHADUINO_HARDWARE
-
-
-//uncomment the follow lines if using the NEMA 23 10A hardware
-//#define NEMA_23_10A_HW
-
-//uncomment the following if the board uses the A5995 driver (NEMA 23 3.2A boards)
-//#define A5995_DRIVER
-
-//Board typ used
+//Board type used
 #define NZ_STEPPER_REV2
+//#define MECHADUINO_HARDWARE	//uncomment this if you are using the Mechaduino hardware
+//#define NEMA_23_10A_HW 	//uncomment the follow lines if using the NEMA 23 10A hardware
 
-#ifdef A5995_DRIVER
-	#ifdef NEMA17_SMART_STEPPER_3_21_2017
-	#error "Only NEMA17_SMART_STEPPER_3_21_2017 or A5595_DRIVER may be defined"
-	#endif
-#endif
 
+//
 #define NZS_FAST_CAL		// define this to use 32k of flash for fast calibration table
 #define NZS_FAST_SINE		//uses 2048 extra bytes to implement faster sine tables
 #define NZS_AS5047_PIPELINE	//does a pipeline read of encoder, which is slightly faster
@@ -160,11 +148,17 @@ typedef enum {
 } RotationDir_t;
 
 typedef enum {
-	ERROR_PIN_MODE_ENABLE = 0, 				//error pin works like enable on step sticks
-	ERROR_PIN_MODE_ACTIVE_LOW_ENABLE = 1,	//error pin works like enable on step sticks
-	ERROR_PIN_MODE_ERROR = 2,				//error pin is low when there is angle error
+	ERROR_PIN_MODE_ACTIVE_HIGH = 0, 		//error pin 
+	ERROR_PIN_MODE_ACTIVE_LOW = 1,			//error pin 
+	ERROR_PIN_MODE_ERROR = 2,				//error pin is low when there is angle error //***FF
 	ERROR_PIN_MODE_BIDIR = 3,				//error pin is bidirection open collector
 } ErrorPinMode_t;
+
+typedef enum {
+	ENABLE_PIN_MODE_ACTIVE_HIGH = 0, 			//enable pin active high
+	ENABLE_PIN_MODE_ACTIVE_LOW = 1,				//enable pin active low 
+	ENABLE_PIN_MODE_ALWAYS = 2,					//always enabled
+} EnablePinMode_t;
 
 typedef enum {
 	CTRL_OFF = 0, 	 						//controller is disabled
@@ -217,6 +211,21 @@ typedef enum {
 	#define PIN_ENABLE		(10)
 	#define PIN_ERROR		(3)
 	#define PIN_VMOTOR		(15)
+	#define PIN_AS5047D_PWR	(11) //pull low to power on AS5047D
+	#define A4954_DRIVER
+
+#elif defined NEMA23_SMART_STEPPER
+	//these are the pins used on the A5995 driver
+	#define PIN_A5995_ENABLE1 	(2) //PA14
+	#define PIN_A5995_ENABLE2 	(18) //PA05  PIN_A4))
+	#define PIN_A5995_MODE1 	(8) //PA06 TCC1 WO[0]
+	#define PIN_A5995_MODE2 	(7)	//PA21 TCC0 WO[4] //3
+	#define PIN_A5995_PHASE1 	(6)	//PA20 TCC0 WO[6] //2
+	#define PIN_A5995_PHASE2 	(5) //PA15 TCC0 W0[5] //1
+	#define PIN_A5995_VREF1		(4) //PA08
+	#define PIN_A5995_VREF2		(9) //PA07
+	#define PIN_A5995_SLEEPn	(25) //RXLED
+	#define A5995_DRIVER
 
 #elif defined NZ_STEPPER_REV1 //NZstepper hardware https://github.com/thmjpr/nano_stepper/tree/master/hardware
 	#define PIN_SW1 (19)		  //analogInputToDigitalPin(PIN_A5))
@@ -226,6 +235,8 @@ typedef enum {
 
 	#define PIN_ENABLE (3)
 	#define PIN_VMOTOR PIN_B2 //Can try using PB02/AIN10/SWDclk as analog voltage input?			Could also change PA19 (D12) to be SW4 input
+	#define PIN_AS5047D_PWR	(11) //pull low to power on AS5047D
+	#define A4954_DRIVER
 
 #elif defined NZ_STEPPER_REV2 //REV2 hardware
 	#define PIN_SW1 (19)		  //A5 = PB02 = 19
@@ -235,34 +246,34 @@ typedef enum {
 	#define PIN_ERROR (3)		  //D3 = PA09
 	#define PIN_ENABLE (10)		  //D10 = PA18
 	#define PIN_VMOTOR (17)	      //A3 = PA04 = 17 - 10k/1k voltage divider from input voltage
+	#define PIN_AS5047D_PWR	(11)  //pull low to power on AS5047D
+	#define A4954_DRIVER
 
-#else				//Nano zero stepper (version without reading motor voltage)
-	#define PIN_SW1			(19)	//analogInputToDigitalPin(PIN_A5))
-	#define PIN_SW3			(14)	//analogInputToDigitalPin(PIN_A0))
-	#define PIN_SW4			(15)	//analogInputToDigitalPin(PIN_A1))
-	#define PIN_ERROR		(10)
+#elif defined NZ_STEPPER_5995		//
+	#define PIN_SW1 (19)
+	//these are the pins used on the A5995 driver
+	#define PIN_A5995_ENABLE 	() //A4 = PA05 = 
+	#define PIN_A5995_MODE	 	() //D7 = PA21 = 
+	#define PIN_A5995_PHASE1 	() //D12 = PA19 = 
+	#define PIN_A5995_PHASE2 	() //D6 = PA20 = 
+	#define PIN_A5995_VREF1		(4) //D4 = PA08
+	#define PIN_A5995_VREF2		(9) //D9 = PA07
+	//#define PIN_A5995_SLEEPn	//sleep pin tied high
+	#define PIN_AS5047D_PWR		(11) //pull low to power on AS5047D
+	#define A5995_DRIVER
+	
+#else
+	#error "model not found"
 #endif
 
 #ifdef USE_STEP_DIR_SERIAL
 	#error "Step/Dir UART not supported on Mechaduino yet"
 #endif
 
-#ifdef A5995_DRIVER
-	#define PIN_ENABLE	(3)
-#endif
-
-#ifdef A5995_DRIVER
-	#define PIN_ENABLE	(3)
-#endif
-
 #define PIN_SCL (21)
 #define PIN_SDA (20)
 #define PIN_USB_PWR (38)		//this pin is high when usb is connected
 #define PIN_AS5047D_CS  (16)	//
-
-#ifndef MECHADUINO_HARDWARE
-	#define PIN_AS5047D_PWR	(11) //pull low to power on AS5047D
-#endif
 
 //These pins use the TIMER in the A4954 driver
 //changing the pin definitions here may require changes in the A4954.cpp file
@@ -282,27 +293,12 @@ typedef enum {
 //#define COMP_FET_A		 (18) 	//PA05
 //#define COMP_FET_B		 (9)	//PA07
 
-//these are the pins used on the A5995 driver
-#define PIN_A5995_ENABLE1 	(2) //PA14
-#define PIN_A5995_ENABLE2 	(18) //PA05  PIN_A4))
-#define PIN_A5995_MODE1 	(8) //PA06 TCC1 WO[0]
-#define PIN_A5995_MODE2 	(7)	//PA21 TCC0 WO[4] //3
-#define PIN_A5995_PHASE1 	(6)	//PA20 TCC0 WO[6] //2
-#define PIN_A5995_PHASE2 	(5) //PA15 TCC0 W0[5] //1
-#define PIN_A5995_VREF1		(4) //PA08
-#define PIN_A5995_VREF2		(9) //PA07
-#define PIN_A5995_SLEEPn	(25) //RXLED
-
 #ifndef MECHADUINO_HARDWARE
 	#define PIN_GREEN_LED  	(8)		//PA06
 #endif
 
-#ifdef NEMA_23_10A_HW
-	#undef PIN_YELLOW_LED
-	#define PIN_YELLOW_LED  	(26) //TXLED (PA27)
-#endif //NEMA_23_10A_HW
-
 #define PIN_RED_LED		    (13)	//PA17
+
 #define PIN_A4954_IN3		(5)		//PA15
 #define PIN_A4954_IN4		(6)		//PA20
 #define PIN_A4954_IN2		(7)		//PA21
@@ -327,6 +323,14 @@ typedef enum {
 #define GPIO_READ(ulPin) {(PORT->Group[g_APinDescription[ulPin].ulPort].IN.reg & (1ul << g_APinDescription[ulPin].ulPin)) != 0}
 #define PIN_PERIPH(pin) {PORT->Group[g_APinDescription[(pin)].ulPort].PINCFG[g_APinDescription[(pin)].ulPin].reg |= PORT_PINCFG_PMUXEN;}
 
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
+#define ABS(a) (((a)>(0))?(a):(-(a)))
+#define DIV(x,y) (((y)>(0))?((x)/(y)):(4294967295))
+#define SIGN(x)  (((x) > 0) - ((x) < 0))
+#define NVIC_IS_IRQ_ENABLED(x) (NVIC->ISER[0] & (1 << ((uint32_t)(x) & 0x1F)))!=0
+
+
 //sets up the pins for the board
 static void boardSetupPins(void)
 {
@@ -337,7 +341,7 @@ static void boardSetupPins(void)
 	pinMode(PIN_SW2, INPUT_PULLUP);
 #endif
 
-#if defined(NZ_STEPPER_REV1) || defined(NZ_STEPPER_REV2)
+#if defined(NZ_STEPPER_REV1) || defined(NZ_STEPPER_REV2) || defined(NZ_STEPPER_5995)
 	pinMode(PIN_STEP_INPUT, INPUT_PULLDOWN);
 	pinMode(PIN_DIR_INPUT, INPUT_PULLDOWN);
 #else
@@ -389,7 +393,7 @@ static void boardSetupPins(void)
 #endif
 }
 
-#if defined(NZ_STEPPER_REV1) || defined(NZ_STEPPER_REV2) || defined(NEMA17_SMART_STEPPER_3_21_2017)
+#if defined(NZ_STEPPER_REV1) || defined(NZ_STEPPER_REV2) || defined(NZ_STEPPER_5995) || defined(NEMA17_SMART_STEPPER_3_21_2017)
 static float GetMotorVoltage(void)
 {
 	uint32_t x;
@@ -420,22 +424,14 @@ static int32_t getTemperature(void)
 static void inline GREEN_LED(bool state)
 {
 #ifdef PIN_GREEN_LED
-	digitalWrite(PIN_GREEN_LED,!state);
+	digitalWrite(PIN_GREEN_LED, !state);
 #endif
 }
 
 static void inline RED_LED(bool state)
 {
-	digitalWrite(PIN_RED_LED,state);
+	digitalWrite(PIN_RED_LED, state);
 }
-
-#define MIN(a,b) (((a)<(b))?(a):(b))
-#define MAX(a,b) (((a)>(b))?(a):(b))
-#define ABS(a) (((a)>(0))?(a):(-(a)))
-#define DIV(x,y) (((y)>(0))?((x)/(y)):(4294967295))
-#define SIGN(x)  (((x) > 0) - ((x) < 0))
-#define NVIC_IS_IRQ_ENABLED(x) (NVIC->ISER[0] & (1 << ((uint32_t)(x) & 0x1F)))!=0
-
 
 //Limit a signed integer to +/-limit number
 //positive number only for constraint

@@ -16,10 +16,15 @@
 #include "board.h"
 #include "as5047d.h"
 #include "calibration.h"
-#include "A4954.h"
-#include "A5995.h"
+#ifdef A5995_DRIVER
+	#include "A5995.h"
+#elif defined  STEPPER_10A
+	#include "fet_driver.h"			//for the NEMA23 10A
+#else
+	#include "A4954.h"
+#endif
+
 #include "nonvolatile.h"
-#include "fet_driver.h"			//for the NEMA23 10A
 
 #define N_DATA (1024)
 

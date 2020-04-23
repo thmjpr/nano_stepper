@@ -182,7 +182,7 @@ void __attribute__ ((optimize("Ofast"))) LCD::showMenu(void)
 
 void __attribute__ ((optimize("Ofast"))) LCD::updateMenu(void)
 {
-	if (displayEnabled == false){return;}
+	skip_when_no_display();
 
 	if (ptrOptions != NULL)
 	{
@@ -276,7 +276,7 @@ void LCD::forceMenuActive(void)
 
 void __attribute__((optimize("Ofast")))LCD::process(void)
 {
-	if (displayEnabled == false){return;}
+	skip_when_no_display();
 
 	if (false == menuActive || ptrMenu == NULL)
 	{
@@ -343,9 +343,9 @@ void LCD::updateLCD(void)
 			d = abs(d);
 			x = 0;
 
-			if (d>0)
+			if (d > 0)
 			{
-				x=((int64_t)d*(60*1000UL))/((int64_t)y * ANGLE_STEPS);
+				x = ((int64_t)d * (60 * 1000UL)) / ((int64_t)y * ANGLE_STEPS);
 			}
 
 			lastAngle = deg;

@@ -266,12 +266,10 @@ int controlLoop(int argc, char *argv[])
 	return NVM->SystemParams.controllerMode;
 }
 
-#ifndef PIN_ENABLE
+#ifdef PIN_ERROR
 static  options_t errorPinOptions[]{
-		{"Enable"},
-		{"!Enable"}, //error pin works like enable on step sticks
 		{"Error"},
-		//	{"BiDir"}, //12/12/2016 not implemented yet
+		{"!Error"},
 		{""}
 };
 
@@ -292,13 +290,13 @@ int errorPin(int argc, char *argv[])
 	}
 	return NVM->SystemParams.errorPinMode;
 }
-#else
+#endif
 
-static  options_t errorPinOptions[]{
+#ifdef PIN_ENABLE
+static  options_t enablePinOptions[]{
 		{"Enable"},
 		{"!Enable"}, //error pin works like enable on step sticks
-		//      {"Error"},
-		//	{"BiDir"}, //12/12/2016 not implemented yet
+		{"Always enabled"},
 		{""}
 };
 
@@ -310,16 +308,15 @@ int enablePin(int argc, char *argv[])
 		i = atol(argv[0]);
 		SystemParams_t params;
 		memcpy((void *)&params, (void *)&NVM->SystemParams, sizeof(params));
-		if (i != params.errorPinMode)
+		if (i != params.enablePinMode)
 		{
-			params.errorPinMode = (ErrorPinMode_t)i;
+			params.enablePinMode = (EnablePinMode_t)i;
 			nvmWriteSystemParms(params);
 		}
 		return i;
 	}
-	return NVM->SystemParams.errorPinMode;
+	return NVM->SystemParams.enablePinMode;
 }
-
 #endif
 
 static  options_t dirPinOptions[]{
@@ -358,8 +355,8 @@ static  menuItem_t MenuMain[]{
 #ifdef PIN_ENABLE
 		{"EnablePin", enablePin, errorPinOptions},
 #endif
-#ifndef PIN_ERROR
-		{"Error Pin", errorPin, errorPinOptions},		**FF whats up with error pin
+#ifdef PIN_ERROR
+		{"Error Pin", errorPin, errorPinOptions},			//Need to test
 #endif
 		{"Dir Pin", dirPin, dirPinOptions},
 		{ "", NULL}
@@ -373,52 +370,32 @@ static  menuItem_t MenuCal[]{
 
 
 //this function is called when error pin changes as enable signal
+//**FF
 static void enableInput(void)
 {
 	static bool lastState = true;
+	bool enablePin;
 #ifdef PIN_ENABLE
-	if (NVM->SystemParams.errorPinMode == ERROR_PIN_MODE_ENABLE)
-	{
-		static int enable;
-		//read our enable pin
-		enable = digitalRead(PIN_ENABLE);
-		enableState = enable;
 
-		if (enable != enableState)
+	enablePin = digitalRead(PIN_ENABLE);	//read our enable pin
+
+	if (enablePin != lastState)
 		{
 			WARNING("Enable now %d", enable);
+			lastState = enablePin;
 		}
-		enableState = enable;
-	}
-	if (NVM->SystemParams.errorPinMode == ERROR_PIN_MODE_ACTIVE_LOW_ENABLE)
-	{
-		static int enable;
-		//read our enable pin
-		enable = !digitalRead(PIN_ENABLE);
-		enableState = enable;
 
-		if (enable != enableState)
-		{
-			WARNING("Enable now %d", enable);
-		}
-		enableState = enable;
-	}
-#else
-	if (NVM->SystemParams.errorPinMode == ERROR_PIN_MODE_ENABLE)
+	if (NVM->SystemParams.enablePinMode == ENABLE_PIN_MODE_ACTIVE_HIGH)
 	{
-		static int enable;
-		//read our enable pin
-		enable = digitalRead(PIN_ERROR);
-		enableState = enable;
-		//stepperCtrl.enable(enable);
+		enableState = enablePin;
 	}
-	if (NVM->SystemParams.errorPinMode == ERROR_PIN_MODE_ACTIVE_LOW_ENABLE)
+	if (NVM->SystemParams.enablePinMode == ENABLE_PIN_MODE_ACTIVE_LOW)
 	{
-		static int enable;
-		//read our enable pin
-		enable = !digitalRead(PIN_ERROR);
-		enableState = enable;
-		//stepperCtrl.enable(enable);
+		enableState = !enablePin;
+	}
+	if (NVM->SystemParams.enablePinMode == ENABLE_PIN_MODE_ALWAYS)
+	{
+		enableState = true;
 	}
 #endif
 
@@ -540,16 +517,13 @@ void validateAndInitNVMParams(void)
 		SystemParams_t params;
 		params.microsteps = 16;
 		params.controllerMode = CTRL_SIMPLE;
-		params.dirPinRotation = CW_ROTATION; //default to clockwise rotation when dir is high
+		params.dirPinRotation = CW_ROTATION; 			//default to clockwise rotation when dir is high
 		params.errorLimit = (int32_t)ANGLE_FROM_DEGREES(1.8);
-		params.errorPinMode = ERROR_PIN_MODE_ENABLE;  //default to enable pin
-		params.microsteps = 16;
-		params.controllerMode = CTRL_SIMPLE;
-		params.dirPinRotation = CW_ROTATION; //default to clockwise rotation when dir is high
-		params.errorLimit = (int32_t)ANGLE_FROM_DEGREES(1.8);
-		params.errorPinMode = ERROR_PIN_MODE_ENABLE;  //default to enable pin
+		params.errorPinMode = ERROR_PIN_MODE_ACTIVE_H; 	//default to active high
+		params.enablePinMode = ENABLE_PIN_MODE_ALWAYS;	//default to always on
 		params.homePin = -1;
 		params.errorLogic = false;
+		params.enableLogic = false;
 		params.homeAngleDelay = ANGLE_FROM_DEGREES(10);
 		nvmWriteSystemParms(params);
 	}
@@ -724,10 +698,10 @@ void NZS::begin(void)
 	stepPinSetup(); //setup the step pin
 
 #ifdef PIN_ENABLE
-	//attachInterrupt(digitalPinToInterrupt(PIN_ENABLE), enableInput, CHANGE);
-	NVIC_SetPriority(EIC_IRQn, 0); //set port A interrupt as highest priority
+	attachInterrupt(digitalPinToInterrupt(PIN_ENABLE), enableInput, CHANGE);
+	//NVIC_SetPriority(EIC_IRQn, 0); //set port A interrupt as highest priority		//**FF
 #else
-	attachInterrupt(digitalPinToInterrupt(PIN_ERROR), enableInput, CHANGE);
+	//attachInterrupt(digitalPinToInterrupt(PIN_ERROR), enableInput, CHANGE);
 #endif
 
 	SmartPlanner.begin(&stepperCtrl);
@@ -811,7 +785,7 @@ void NZS::loop(void)
 	//read the enable pin and update
 	// this is also done as an edge interrupt but does not always see
 	// to trigger the ISR.
-	enableInput();
+	enableInput(); //**FF interrupt should always occur, check..
 
 	if (enableState != stepperCtrl.getEnable())
 	{
@@ -829,7 +803,6 @@ void NZS::loop(void)
 	Lcd.process();
 #endif
 	//stepperCtrl.PrintData(); //prints steps and angle to serial USB.
-
 
 	printLocation(); //print out the current location
 

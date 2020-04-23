@@ -9,6 +9,8 @@
  *	BSD license, check license.txt for more information
  *	All text above, must be included in any redistribution
  *********************************************************************/
+#ifdef A4954
+
 #include "A4954.h"
 #include "wiring_private.h"
 #include "syslog.h"
@@ -338,3 +340,4 @@ int32_t A4954::move(int32_t stepAngle, uint32_t mA)
 }
 #pragma GCC pop_options
 
+#endif
