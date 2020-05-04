@@ -22,29 +22,54 @@ bool flashInit(void)
 	return true;
 }
 
+//Flash erase row
+//6ms for row erase
+//2.5ms for page programming
 static void erase(const volatile void *flash_ptr)
 {
 	NVMCTRL->ADDR.reg = ((uint32_t)flash_ptr) / 2;
-	NVMCTRL->CTRLA.reg = NVMCTRL_CTRLA_CMDEX_KEY | NVMCTRL_CTRLA_CMD_ER;
-	while (!NVMCTRL->INTFLAG.bit.READY)
+	NVMCTRL->CTRLA.reg = NVMCTRL_CTRLA_CMDEX_KEY | NVMCTRL_CTRLA_CMD_ER;		//ER = erase row
+	flashWaitForReady();
+}
+
+void flashWaitForReady(void)
+{
+	int i = 0;
+	while (!NVMCTRL->INTFLAG.bit.READY) 
 	{
+		i++;
 	}
 }
 
 bool flashErase(const volatile void *flash_ptr, uint32_t size)
 {
 	const uint8_t *ptr = (const uint8_t *)flash_ptr;
+	
+	//if(flash_ptr < NVM_ADDRESS) ERROR
+	
 	while (size > FLASH_ROW_SIZE)
 	{
 		erase(ptr);
 		ptr += FLASH_ROW_SIZE;
 		size -= FLASH_ROW_SIZE;
 	}
+
 	if (size > 0)
 	{
 		erase(ptr);
 	}
-	return true; //TODO should verify the erase
+	
+	//Check last page erase successful (all 0xFF)
+	for (int i = FLASH_ROW_SIZE; i > 0; i--)
+	{
+		if (ptr[i-1] != FLASH_ERASE_VALUE)
+		{
+			ERROR("Flash erase failed");
+			return false;
+		}			
+	}
+			
+	return true;
 }
 
 static inline uint32_t read_unaligned_uint32(const void *data)
@@ -64,11 +89,9 @@ static inline uint32_t read_unaligned_uint32(const void *data)
 void flashWrite(const volatile void *flash_ptr, const void *data, uint32_t size)
 {
 	uint32_t *ptrPage;
-	uint8_t *destPtr;
-	uint8_t *srcPtr;
-	uint32_t bytesInBlock;
+	uint8_t *srcPtr, *destPtr;
+	uint32_t bytesInBlock, offset;
 	__attribute__((__aligned__(4))) uint8_t buffer[FLASH_ROW_SIZE];
-	uint32_t offset;
 
 	destPtr = (uint8_t *)flash_ptr;
 	srcPtr = (uint8_t *)data;
@@ -86,7 +109,7 @@ void flashWrite(const volatile void *flash_ptr, const void *data, uint32_t size)
 		//get pointer to start of page
 		ptrPage = (uint32_t *)((((uint32_t)destPtr) / (FLASH_ROW_SIZE)) * FLASH_ROW_SIZE);
 
-		LOG("pointer to page %d(0x%08x) %d", (uint32_t)ptrPage, (uint32_t)ptrPage, destPtr);
+		LOG("pointer to page %d(0x%08x) dest:%d", (uint32_t)ptrPage, (uint32_t)ptrPage, destPtr);
 
 		//fill page buffer with data from flash
 		memcpy(buffer, ptrPage, FLASH_ROW_SIZE);
@@ -97,13 +120,11 @@ void flashWrite(const volatile void *flash_ptr, const void *data, uint32_t size)
 		{
 			i = size;
 		}
-		LOG("changing %d bytes", i);
 		memcpy(&buffer[offset], srcPtr, i);
 
-		//erase page
-		flashErase(ptrPage, FLASH_ROW_SIZE);
-		//write new data to flash
-		flashWritePage(ptrPage, buffer, FLASH_ROW_SIZE);
+		LOG("changing %d bytes (%0x %0x)", i, buffer[offset], buffer[offset+1]);
+		flashErase(ptrPage, FLASH_ROW_SIZE);				//erase page
+		flashWritePage(ptrPage, buffer, FLASH_ROW_SIZE);	//write new data to flash
 
 		uint32_t *ptr = (uint32_t *)buffer;
 		for (j = 0; j < FLASH_ROW_SIZE / 4; j++)
@@ -144,9 +165,7 @@ void flashWritePage(const volatile void *flash_ptr, const void *data, uint32_t s
 	{
 		// Execute "PBC" Page Buffer Clear
 		NVMCTRL->CTRLA.reg = NVMCTRL_CTRLA_CMDEX_KEY | NVMCTRL_CTRLA_CMD_PBC;
-		while (NVMCTRL->INTFLAG.bit.READY == 0)
-		{
-		}
+		flashWaitForReady();
 
 		// Fill page buffer
 		uint32_t i;
@@ -160,8 +179,6 @@ void flashWritePage(const volatile void *flash_ptr, const void *data, uint32_t s
 
 		// Execute "WP" Write Page
 		NVMCTRL->CTRLA.reg = NVMCTRL_CTRLA_CMDEX_KEY | NVMCTRL_CTRLA_CMD_WP;
-		while (NVMCTRL->INTFLAG.bit.READY == 0)
-		{
-		}
+		flashWaitForReady();
 	}
 }

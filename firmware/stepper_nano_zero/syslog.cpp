@@ -16,7 +16,6 @@
 #include <Arduino.h>
 #include "board.h"
 
-
 #define ANSI_WHITE 		"\033[37m"
 #define ANSI_NORMAL 	"\033[0m"
 #define ANSI_BLINK 		"\033[5m"
@@ -37,11 +36,11 @@
 Uart *ptrSerial = NULL;
 eLogLevel SyslogLevelToWrite;
 
-bool DebugUART = false;
+bool DebugUART = DEBUG_SERIAL_VIA_USB;
 static char buffer[SYSLOG_BUFFER_SIZE];
 static unsigned int BufIndex = 0;
-
 static int SysLog_Enabled = 1;
+int SysLogInitDone = 0;
 
 int SysLogDisable(void)
 {
@@ -59,6 +58,7 @@ int SysLogIsEnabled(void)
 {
 	return SysLog_Enabled;
 }
+
 void SysLogDebug(bool x)
 {
 	DebugUART = x;
@@ -82,13 +82,13 @@ void SysLogPuts(const char *ptrStr)
 	{
 		ptrSerial->write(ptrStr);
 	}
+
 	if (DebugUART)
 	{
-		SerialUSB.write(ptrStr);
+		//	SerialUSB.write(ptrStr);
 	}
 }
 
-int SysLogInitDone = 0;
 void SysLogInit(Uart *ptrSerialObj, eLogLevel LevelToWrite)
 {
 	ptrSerial = ptrSerialObj;
@@ -99,45 +99,40 @@ void SysLogInit(Uart *ptrSerialObj, eLogLevel LevelToWrite)
 	memset(buffer, 0, SYSLOG_BUFFER_SIZE);
 }
 
-int SysLogProcessing = 0; // this is used such that syslog can be reentrent
+int SysLogProcessing = 0;  // this is used such that syslog can be reentrent
 int SysLogMissed = 0;
 
 void SysLog(eLogLevel priorty, const char *fmt, ...)
 {
-	//UINT32 ret;
 	int previousState = SysLog_Enabled;
 	char vastr[MAX_SYSLOG_STRING] = { 0 };
-	//char outstr[MAX_SYSLOG_STRING]={0};
-
 	va_list ap;
 
 	if (SysLogProcessing)
 	{
 		//we have a syslog from a syslog call thus return as not much we can do...
-		//memset(buffer,0,SYSLOG_BUFFER_SIZE);
 		va_start(ap, fmt);
 		vsnprintf(&buffer[BufIndex], SYSLOG_BUFFER_SIZE - BufIndex, (char *)fmt, ap);
 		BufIndex = strlen(buffer);
 		snprintf(&buffer[BufIndex], SYSLOG_BUFFER_SIZE - BufIndex, NEW_LINE);
 		BufIndex = strlen(buffer);
-		SysLogMissed++; //set flag that we missed a call
+		SysLogMissed++;  //set flag that we missed a call
 		return;
 	}
 
 	SysLogProcessing = 1;
 
-	//stop the watch dog will doing a SysLog print
+	//stop the watchdog while doing a SysLog print
 	Sys_WDogHoldOn();
 
 	if (!SysLogInitDone)
 	{
-		SysLogInit(NULL, LOG_WARNING); //not sure who is reseting serial port but before we print set it up
+		SysLogInit(NULL, LOG_WARNING);  //not sure who is reseting serial port but before we print set it up
 		WARNING("You should init SysLog");
-		//SysLogInitDone=0;
 	}
 
 	//Send out a * that we missed a SysLog Message before this current message
-	if (SysLogMissed)
+	if(SysLogMissed)
 	{
 		//SysLogPuts(ANSI_RED);
 		SysLogPuts("*** Reentrant Log call possible loss of message(s):");
@@ -166,17 +161,16 @@ void SysLog(eLogLevel priorty, const char *fmt, ...)
 	//sprintf(outstr, "[%s] %s\r\n", datetimestr, vastr);
 
 	
-	if (priorty <= LOG_ERROR)
+	if(priorty <= LOG_ERROR)
 	{
 		SysLog_Enabled = 1;
 		SysLogPuts(ANSI_RED);
-
 	}
-	else if (priorty == LOG_DEBUG)
+	else if(priorty == LOG_DEBUG)
 	{
 		SysLogPuts(ANSI_WHITE);
 	}
-	else if (priorty == LOG_WARNING)
+	else if(priorty == LOG_WARNING)
 	{
 		SysLogPuts(ANSI_BLUE);
 	}
@@ -204,13 +198,6 @@ void SysLog(eLogLevel priorty, const char *fmt, ...)
 #endif
 
 	SysLogPuts(vastr);
-	//
-	//    if (priorty<=SyslogLevelToWrite && SysLogWriteFunc!=NULL)
-	//    {
-	//    	SysLogWriteFunc(vastr,strlen(vastr));
-	//    	SysLogWriteFunc(NEW_LINE,strlen(NEW_LINE));
-	//    }
-
 	SysLogPuts(ANSI_NORMAL);
 	SysLogPuts(NEW_LINE);
 

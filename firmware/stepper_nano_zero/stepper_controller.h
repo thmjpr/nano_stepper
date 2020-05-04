@@ -14,17 +14,26 @@
 
 #include "syslog.h"
 #include "board.h"
-#include "as5047d.h"
 #include "calibration.h"
+#include "nonvolatile.h"
+
+#ifdef AS5047D_ENCODER
+	#include "as5047d.h"
+#elif defined A1333_DRIVER
+	#include "a1333.h"
+#else
+	#error 
+#endif
+
 #ifdef A5995_DRIVER
 	#include "A5995.h"
 #elif defined  STEPPER_10A
 	#include "fet_driver.h"			//for the NEMA23 10A
-#else
+#elif defined A4954_DRIVER
 	#include "A4954.h"
+#else
+	#error "driver not defined"
 #endif
-
-#include "nonvolatile.h"
 
 #define N_DATA (1024)
 
@@ -43,7 +52,7 @@ typedef struct {
 } PID_t;
 
 //
- typedef __attribute__((packed, aligned(4))) struct {
+ typedef __attribute__((aligned(4))) struct {
 	  int32_t microSecs;
 	  int32_t desiredLoc;
 	  int32_t actualLoc;
@@ -71,13 +80,12 @@ class StepperCtrl
 		AS5047D encoder;
 #ifdef NEMA_23_10A_HW
 		FetDriver stepperDriver;
-#else
-#ifdef A5995_DRIVER
+#elif defined A5995_DRIVER
 		A5995 stepperDriver;
-#else
+#elif defined A4954_DRIVER
 		A4954 stepperDriver;
 #endif
-#endif
+	
 		uint16_t startUpEncoder;
 		volatile int32_t ticks = 0;
 		volatile Location_t locs[MAX_NUM_LOCATIONS];

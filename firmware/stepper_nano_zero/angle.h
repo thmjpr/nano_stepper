@@ -89,6 +89,7 @@ public:
 		a = angle + (uint16_t)y.angle;
 		return Angle(a);
 	}
+
 	Angle operator+(const long int x)
 	{
 		int32_t a;
@@ -103,6 +104,7 @@ public:
 		}
 		return Angle((uint16_t)a);
 	}
+	
 	Angle operator+(const unsigned long int x)
 	{
 		uint32_t a;

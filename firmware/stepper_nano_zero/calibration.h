@@ -46,7 +46,6 @@ private:
   bool fastCalValid = false;
   void loadFromFlash(void);
   bool flashGood(void); //returns true if the flash copy of calibration is valid
-
   void updateFastCal(void);
   void createFastCal(void);
 

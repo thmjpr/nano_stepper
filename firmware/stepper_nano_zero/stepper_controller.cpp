@@ -89,22 +89,21 @@ static void exitCriticalSection(bool prevState)
 	} //else do nothing
 }
 
-
 void StepperCtrl::updateParamsFromNVM(void)
 {
 	bool state = enterCriticalSection();
 
-	pPID.Kd = NVM->pPID.Kd*CTRL_PID_SCALING;
-	pPID.Ki = NVM->pPID.Ki*CTRL_PID_SCALING;
-	pPID.Kp = NVM->pPID.Kp*CTRL_PID_SCALING;
+	pPID.Kd = NVM->pPID.Kd * CTRL_PID_SCALING;
+	pPID.Ki = NVM->pPID.Ki * CTRL_PID_SCALING;
+	pPID.Kp = NVM->pPID.Kp * CTRL_PID_SCALING;
 
-	vPID.Kd = NVM->vPID.Kd*CTRL_PID_SCALING;
-	vPID.Ki = NVM->vPID.Ki*CTRL_PID_SCALING;
-	vPID.Kp = NVM->vPID.Kp*CTRL_PID_SCALING;
+	vPID.Kd = NVM->vPID.Kd * CTRL_PID_SCALING;
+	vPID.Ki = NVM->vPID.Ki * CTRL_PID_SCALING;
+	vPID.Kp = NVM->vPID.Kp * CTRL_PID_SCALING;
 
-	sPID.Kd = NVM->sPID.Kd*CTRL_PID_SCALING;
-	sPID.Ki = NVM->sPID.Ki*CTRL_PID_SCALING;
-	sPID.Kp = NVM->sPID.Kp*CTRL_PID_SCALING;
+	sPID.Kd = NVM->sPID.Kd * CTRL_PID_SCALING;
+	sPID.Ki = NVM->sPID.Ki * CTRL_PID_SCALING;
+	sPID.Kp = NVM->sPID.Kp * CTRL_PID_SCALING;
 
 	if (NVM->SystemParams.parametersValid)
 	{
@@ -116,9 +115,10 @@ void StepperCtrl::updateParamsFromNVM(void)
 		ERROR("This should never happen but just in case");
 		systemParams.microsteps = 16;
 		systemParams.controllerMode = CTRL_SIMPLE;
-		systemParams.dirPinRotation = CW_ROTATION; //default to clockwise rotation when dir is high
+		systemParams.dirPinRotation = RotationDir_t::CW_ROTATION; //default to clockwise rotation when dir is high
 		systemParams.errorLimit = (int32_t)ANGLE_FROM_DEGREES(1.8);
-		systemParams.errorPinMode = ERROR_PIN_MODE_ENABLE;  //default to enable pin
+		systemParams.errorPinMode = ERROR_PIN_MODE_ACTIVE_LOW; //active low on error (open collector on)
+		systemParams.enablePinMode = ENABLE_PIN_MODE_ALWAYS;
 		systemParams.errorLogic = false;
 		systemParams.homeAngleDelay = ANGLE_FROM_DEGREES(10);
 		systemParams.homePin = -1; //no homing pin configured
@@ -136,6 +136,7 @@ void StepperCtrl::updateParamsFromNVM(void)
 	}
 	else
 	{
+		LOG("setting default mparam");
 		//MotorParams_t Params;
 		motorParams.fullStepsPerRotation = 200;
 		motorParams.currentHoldMa = 500;
@@ -260,7 +261,7 @@ void StepperCtrl::encoderDiagnostics(char *ptrStr)
 
 //TODO This function does two things, set rotation direction
 //  and measures step size, it should be two functions.
-//return is anlge in degreesx100 ie 360.0 is returned as 36000
+//return is angle in degrees x100 ie 360.0 is returned as 36000
 float StepperCtrl::measureStepSize(void)
 {
 	int32_t angle1, angle2, x, i;
@@ -296,11 +297,11 @@ float StepperCtrl::measureStepSize(void)
 		//we crossed the wrap around
 		if (angle1 > angle2)
 		{
-			angle1 = angle1 + (int32_t)ANGLE_STEPS;
+			angle1 += (int32_t)ANGLE_STEPS;
 		}
 		else
 		{
-			angle2 = angle2 + (int32_t)ANGLE_STEPS;
+			angle2 += (int32_t)ANGLE_STEPS;
 		}
 	}
 	LOG("Angles %d %d", angle1, angle2);
@@ -327,6 +328,7 @@ float StepperCtrl::measureStepSize(void)
 	//move back
 	stepperDriver.move(-A4954_NUM_MICROSTEPS / 2, motorParams.currentMa); //move one half step 'forward'
 	delay(100);
+	
 	stepperDriver.move(-A4954_NUM_MICROSTEPS, motorParams.currentMa); //move one half step 'forward'
 
 	systemParams.microsteps = microsteps;
@@ -578,7 +580,7 @@ stepCtrlError_t StepperCtrl::begin(void)
 	}
 	else
 	{
-		LOG("measuring step size");
+		LOG("motorparam not valid, measuring step size");
 		x = measureStepSize();
 		if (abs(x) < 0.5)
 		{
@@ -691,7 +693,6 @@ Angle StepperCtrl::sampleMeanEncoder(int32_t numSamples)
 		x = (((int32_t)encoder.readEncoderAngle()) * 4);
 		if (encoder.getError())
 		{
-
 			SerialUSB.println("AS5047 Error");
 			delay(1000);
 			return 0;
@@ -784,15 +785,10 @@ void StepperCtrl::requestStep(int dir, uint16_t steps)
 	}
 
 	if (false == enableFeedback)
-	{
 		moveToAngle(getDesiredLocation(), motorParams.currentMa);
-	}
-	if (state) enableTCInterrupts();
-	if (false == enableFeedback)
-	{
-		moveToAngle(getDesiredLocation(), motorParams.currentMa);
-	}
-	if (state) enableTCInterrupts();
+	
+	if (state) 
+		enableTCInterrupts();
 }
 
 
@@ -855,7 +851,6 @@ void StepperCtrl::moveToAngle(int32_t a, uint32_t ma)
 	//we need to convert 'Angle' to A4954 steps
 	a = a % ANGLE_STEPS;  //we only interested in the current angle
 
-
 	a = DIVIDE_WITH_ROUND((a*motorParams.fullStepsPerRotation*A4954_NUM_MICROSTEPS), ANGLE_STEPS);
 
 	//LOG("move %d %d",a,ma);
@@ -886,14 +881,18 @@ int64_t StepperCtrl::getCurrentLocation(void)
 	{
 		currentLocation -= ANGLE_STEPS;
 	}
+	
 	if (x < -((int32_t)ANGLE_STEPS / 2))
 	{
 		currentLocation += ANGLE_STEPS;
 	}
+	
 	currentLocation = (currentLocation & 0xFFFFFFFFFFFF0000UL) | (uint16_t)a;
-	if (state) enableTCInterrupts();
+	
+	if (state) 
+		enableTCInterrupts();
+	
 	return currentLocation;
-
 }
 
 
@@ -937,6 +936,7 @@ void StepperCtrl::PrintData(void)
 	SerialUSB.println(s);
 	exitCriticalSection(state);
 }
+
 //this is the velocity PID feedback loop
 bool StepperCtrl::vpidFeedback(int64_t desiredLoc, int64_t currentLoc, Control_t *ptrCtrl)
 {
@@ -953,7 +953,7 @@ bool StepperCtrl::vpidFeedback(int64_t desiredLoc, int64_t currentLoc, Control_t
 	v = y - lastY;
 
 	//add in phase prediction
-	y = y + calculatePhasePrediction(currentLoc);
+	y += calculatePhasePrediction(currentLoc);
 	z = y;
 	lastY = y;
 	v = v * NZS_CONTROL_LOOP_HZ;
@@ -966,7 +966,7 @@ bool StepperCtrl::vpidFeedback(int64_t desiredLoc, int64_t currentLoc, Control_t
 		Iterm += (vPID.Ki * error);
 
 		//If I term greater than +/- max current
-		constrain_pm(&Iterm, (16 * 4096 * CTRL_PID_SCALING * motorParams.currentMa));
+		constrain_pm(&Iterm, (16 * 4096 * CTRL_PID_SCALING * (int64_t)motorParams.currentMa));
 
 		u = ((vPID.Kp * error) + Iterm - (vPID.Kd *(lastError - error)));
 		U = abs(u) / CTRL_PID_SCALING / 1024;	//scale the error to make PID params close to 1.0 by dividing by 1024
@@ -1018,7 +1018,7 @@ bool StepperCtrl::pidFeedback(int64_t desiredLoc, int64_t currentLoc, Control_t 
 	int64_t y;
 
 	y = currentLoc;
-	y = y + calculatePhasePrediction(currentLoc);		//add in phase prediction
+	y += calculatePhasePrediction(currentLoc);		//add in phase prediction
 
 	if (enableFeedback)
 	{
@@ -1134,16 +1134,16 @@ bool StepperCtrl::determineError(int64_t currentLoc, int64_t error)
 	static int64_t lastError = 0;
 	static int64_t lastVelocity = 0;
 
-	int64_t velocity;
+	int64_t cur_velocity;
 
 	//since this is called on periodic timer the velocity
 	// is propotional to the change in location
 	// one rotation per second is velocity of 10, assumming 6khz update rate
 	// one rotation per minute is 10/60 velocity units
 	// since this is less than 1 we will scale the velo
-	velocity = (currentLoc - lastLocation);
+	cur_velocity = (currentLoc - lastLocation);
 
-	lastVelocity = velocity;
+	lastVelocity = cur_velocity;
 	lastError = error;
 	lastLocation = currentLoc;
 }
@@ -1381,7 +1381,6 @@ int32_t StepperCtrl::getLocation(Location_t *ptrLoc)
 
 	//calculate number of locations left
 	n = ((locWriteIndx + MAX_NUM_LOCATIONS) - locReadIndx) % MAX_NUM_LOCATIONS;
-
 
 	exitCriticalSection(state);
 	return n;

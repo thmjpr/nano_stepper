@@ -16,9 +16,9 @@
 #include "syslog.h"
 
 
-#define FLASH_PAGE_SIZE_NZS (64) //bytes
-#define FLASH_ROW_SIZE (FLASH_PAGE_SIZE_NZS*4) //defined in the datasheet as 4x page size
-#define FLASH_ERASE_VALUE (0xFF) //value of flash after an erase
+#define FLASH_PAGE_SIZE_NZS (64)                //bytes
+#define FLASH_ROW_SIZE (FLASH_PAGE_SIZE_NZS*4)  //defined in the datasheet as 4x page size
+#define FLASH_ERASE_VALUE (0xFF)                //value of flash after an erase
 
 #define FLASH_ALLOCATE(name, size) \
 	__attribute__((__aligned__(FLASH_ROW_SIZE))) \
@@ -27,16 +27,18 @@
 bool flashInit(void); //this checks that our assumptions are true
 
 bool flashErase(const volatile void *flash_ptr, uint32_t size);
-void flashWrite(const volatile void *flash_ptr,const void *data,uint32_t size);
+void flashWrite(const volatile void *flash_ptr, const void *data, uint32_t size);
 void flashWritePage(const volatile void *flash_ptr, const void *data, uint32_t size);
+void flashWaitForReady(void);
 
-//you can read by dereferencing pointer but we will add a read
+//you can read by dereferencing pointer but we will add a read function
 static inline int32_t flashRead(const volatile void *flash_ptr, void *data, uint32_t size)
 {
   memcpy(data, (const void *)flash_ptr, size);
 }
 
 
+static inline uint32_t read_unaligned_uint32(const void *data);
 
 
 #endif //__FLASH__H__

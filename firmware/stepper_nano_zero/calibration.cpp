@@ -54,7 +54,6 @@ static void printData(int32_t *data, int32_t n)
 
 bool CalibrationTable::updateTableValue(int32_t index, int32_t value)
 {
-
 	table[index].value = value;
 	table[index].error = CALIBRATION_STEPS / CALIBRATION_TABLE_SIZE; //or error is roughly like variance, so set it to span to next calibration value.
 	return true;
@@ -94,7 +93,6 @@ Angle CalibrationTable::fastReverseLookup(Angle encoderAngle)
 
 Angle CalibrationTable::reverseLookup(Angle encoderAngle)
 {
-
 	int32_t i = 0;
 	int32_t a1, a2;
 	int32_t x;
@@ -168,7 +166,9 @@ Angle CalibrationTable::reverseLookup(Angle encoderAngle)
 		}
 		i++;
 	}
-	ERROR("WE did some thing wrong");
+	ERROR("WE did something wrong");
+
+	//safe shutdown //**FFF
 }
 
 void CalibrationTable::smoothTable(void)
@@ -292,7 +292,7 @@ void CalibrationTable::saveToFlash(void)
 	memcpy(&data, &NVM->CalibrationTable, sizeof(data));
 	createFastCal();
 
-	LOG("after writting status is %d", data.status);
+	LOG("after writing status is %d", data.status);
 	loadFromFlash();
 }
 
@@ -536,7 +536,7 @@ int CalibrationTable::getValue(Angle actualAngle, CalData_t *ptrData)
 	value = interp(angleLow, y1, angleHigh, y2, actualAngle);
 
 	//handle the wrap condition
-	if (value >= CALIBRATION_STEPS)
+	if (value >= CALIBRATION_STEPS)		//never occur ***FFF
 	{
 		value = value - CALIBRATION_STEPS;
 	}

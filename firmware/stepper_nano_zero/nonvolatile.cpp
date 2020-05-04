@@ -17,7 +17,7 @@
 // be sure to set the last word as status flag
 // this save time calibrating each time we do a code build
 #ifdef NZS_FAST_CAL
-__attribute__((__aligned__(FLASH_ROW_SIZE))) const uint16_t NVM_flash[16767] = { //allocates 33280 bytes
+__attribute__((__aligned__(FLASH_ROW_SIZE))) const uint16_t NVM_flash[NVM_FLASH_SIZE] = { //allocates 33280 bytes
 #else
 __attribute__((__aligned__(FLASH_ROW_SIZE))) const uint16_t NVM_flash[256] = { //allocates 512 bytes
 #endif
@@ -72,22 +72,23 @@ bool nvmWrite_pPID(float Kp, float Ki, float Kd)
 	pid.parametersValid = true;
 
 	flashWrite((void *)&NVM->pPID, &pid, sizeof(pid));
+
 	return true;
 }
 
 bool nvmWriteSystemParms(SystemParams_t &systemParams)
 {
 	systemParams.parametersValid = true;
-
 	flashWrite((void *)&NVM->SystemParams, &systemParams, sizeof(systemParams));
+
 	return true;
 }
 
 bool nvmWriteMotorParms(MotorParams_t &motorParams)
 {
 	motorParams.parametersValid = true;
-
 	flashWrite((void *)&NVM->motorParams, &motorParams, sizeof(motorParams));
+
 	return true;
 }
 
@@ -105,4 +106,6 @@ bool nvmErase(void)
 #ifdef NZS_FAST_CAL
 	flashWrite((void *)&NVM->FastCal.checkSum, &cs, sizeof(cs));
 #endif
+
+	return true;
 }

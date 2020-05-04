@@ -14,6 +14,9 @@
 
 #include <Arduino.h>
 
+//Debugging notes:
+//- Jlink - turn off "flash caching " in JLINK settings
+
 //Board type used
 #define NZ_STEPPER_REV2
 //#define MECHADUINO_HARDWARE	//uncomment this if you are using the Mechaduino hardware
@@ -26,7 +29,6 @@
 #define NZS_AS5047_PIPELINE	//does a pipeline read of encoder, which is slightly faster
 #define NZS_CONTROL_LOOP_HZ (6000) //update rate of control loop
 
-
 #define NZS_LCD_ABSOLUTE_ANGLE  //define this to show angle from zero in positive and negative direction
 // for example 2 rotations from start will be angle of 720 degrees
 
@@ -34,7 +36,7 @@
 //as of FW0.11 it is considered development only
 
 #define BUILD_DATE __DATE__		//Build date, 11 char long
-#define VERSION "FW: 0.37"		//this is what prints on LCD during splash screen
+#define VERSION "FW: 0.39"		//this is what prints on LCD during splash screen
 
 //Define this to allow command out serial port, else hardware serial is debug log
 //#define CMD_SERIAL_PORT
@@ -136,16 +138,25 @@
  *       - Added debug command to allow debug messages out the USB serial port
  *  0.36 - eeprom set location math was wrong.
  *  0.37 - fixed bug where the motor would pause periodically do the the TC4 counter.
+ *  0.38 - fixed bug in the velocity feedback mode.
+ *  0.39 - changed step count to TCC2, improved the dir pin setup/hold
+ *  0.40 - Mechaduino code not added
  */
 
 
 /*
  *  Typedefs that are used across multiple files/modules
  */
+/*
 typedef enum {
 	CW_ROTATION = 0,
 	CCW_ROTATION = 1,
-} RotationDir_t;
+} RotationDir_t;*/
+
+enum class RotationDir_t{
+	CW_ROTATION = 0,
+	CCW_ROTATION = 1,
+};
 
 typedef enum {
 	ERROR_PIN_MODE_ACTIVE_HIGH = 0, 		//error pin 
@@ -195,6 +206,8 @@ typedef enum {
 	#define SerialUSB Serial
 #endif 
 
+#define DEBUG_SERIAL_VIA_USB	false		//False if using Tx/Rx output for debug, True = use USB serial port
+
 #define PIN_STEP_INPUT  (0)		//D0 = PA11
 #define PIN_DIR_INPUT   (1)		//D10 = PA10
 
@@ -211,6 +224,9 @@ typedef enum {
 	#define PIN_ENABLE		(10)
 	#define PIN_ERROR		(3)
 	#define PIN_VMOTOR		(15)
+	#define PIN_A4954_IN1	(8)
+	#define DISABLE_LCD
+	#undef Serial5
 	#define PIN_AS5047D_PWR	(11) //pull low to power on AS5047D
 	#define A4954_DRIVER
 
@@ -247,7 +263,8 @@ typedef enum {
 	#define PIN_ENABLE (10)		  //D10 = PA18
 	#define PIN_VMOTOR (17)	      //A3 = PA04 = 17 - 10k/1k voltage divider from input voltage
 	#define PIN_AS5047D_PWR	(11)  //pull low to power on AS5047D
-	#define A4954_DRIVER
+	#define AS5047D_ENCODER	1
+	#define A4954_DRIVER	1		//
 
 #elif defined NZ_STEPPER_5995		//
 	#define PIN_SW1 (19)
@@ -262,6 +279,9 @@ typedef enum {
 	#define PIN_AS5047D_PWR		(11) //pull low to power on AS5047D
 	#define A5995_DRIVER
 	
+#elif defined MKS_Servo42
+	#define A1333_ENCODER	1
+	//need more defs
 #else
 	#error "model not found"
 #endif
@@ -293,27 +313,19 @@ typedef enum {
 //#define COMP_FET_A		 (18) 	//PA05
 //#define COMP_FET_B		 (9)	//PA07
 
-#ifndef MECHADUINO_HARDWARE
-	#define PIN_GREEN_LED  	(8)		//PA06
-#endif
-
+#define PIN_GREEN_LED  		(8)		//PA06
 #define PIN_RED_LED		    (13)	//PA17
 
 #define PIN_A4954_IN3		(5)		//PA15
 #define PIN_A4954_IN4		(6)		//PA20
 #define PIN_A4954_IN2		(7)		//PA21
+#define PIN_A4954_IN1		(18)	//PA05
 
-#ifdef MECHADUINO_HARDWARE
-	#define PIN_A4954_IN1	(8)
-#else
-	#define PIN_A4954_IN1	(18) //PA05
-#endif
-
-#define PIN_A4954_VREF34	(4)	//PA08
-#define PIN_A4954_VREF12	(9) //PA07
+#define PIN_A4954_VREF34	(4)		//PA08
+#define PIN_A4954_VREF12	(9)		//PA07
 
 //Here are some useful macros
-#define DIVIDE_WITH_ROUND(x,y)  ((x+y/2)/y)
+#define DIVIDE_WITH_ROUND(x,y)  (((x)+(y)/2)/(y))
 
 #define GPIO_LOW(pin) {PORT->Group[g_APinDescription[(pin)].ulPort].OUTCLR.reg = (1ul << g_APinDescription[(pin)].ulPin);}
 #define GPIO_HIGH(pin) {PORT->Group[g_APinDescription[(pin)].ulPort].OUTSET.reg = (1ul << g_APinDescription[(pin)].ulPin);}

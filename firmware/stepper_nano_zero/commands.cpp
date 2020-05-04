@@ -16,7 +16,7 @@ extern int32_t dataEnabled;
 #define COMMANDS_PROMPT (":>")
 sCmdUart UsbUart;
 sCmdUart SerialUart;
-sCmdUart HostUart; //uart on the step/dir pins
+sCmdUart HostUart; 			//uart on the step/dir pins
 
 static int isPowerOfTwo(unsigned int x)
 {
@@ -759,7 +759,7 @@ static int dirpin_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 
 	if (argc == 0)
 	{
-		if (CW_ROTATION == NVM->SystemParams.dirPinRotation)
+		if (RotationDir_t::CW_ROTATION == NVM->SystemParams.dirPinRotation)
 		{
 			CommandPrintf(ptrUart, "dirpin CW(%d)\n\r", (uint32_t)NVM->SystemParams.dirPinRotation);
 		}
@@ -787,7 +787,7 @@ static int dirpin_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 			nvmWriteSystemParms(systemParams);
 			stepperCtrl.updateParamsFromNVM();
 
-			if (CW_ROTATION == NVM->SystemParams.dirPinRotation)
+			if (RotationDir_t::CW_ROTATION == NVM->SystemParams.dirPinRotation)
 			{
 				CommandPrintf(ptrUart, "dirpin CW(%d)\n\r", (uint32_t)NVM->SystemParams.dirPinRotation);
 			}
@@ -879,15 +879,15 @@ static int enablepinmode_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 
 	if (argc == 0)
 	{
-		if (ENABLE_PIN_MODE_ENABLE == NVM->SystemParams.enablePinMode)
+		if (ENABLE_PIN_MODE_ACTIVE_HIGH == NVM->SystemParams.enablePinMode)
 		{
 			CommandPrintf(ptrUart, "Enable pin -  Enable Active High(%d)\n\r", (uint32_t)NVM->SystemParams.enablePinMode);
 		}
-		else if (ENABLE_PIN_MODE_ACTIVE_LOW_ENABLE == NVM->SystemParams.enablePinMode)
+		else if (ENABLE_PIN_MODE_ACTIVE_LOW == NVM->SystemParams.enablePinMode)
 		{
 			CommandPrintf(ptrUart, "Enable pin -  Enable active low(%d)\n\r", (uint32_t)NVM->SystemParams.enablePinMode);
 		}
-		else if (ENABLE_PIN_MODE_ALWAYS == NVM->systemParams.enablePinMode)
+		else if (ENABLE_PIN_MODE_ALWAYS == NVM->SystemParams.enablePinMode)
 		{
 			CommandPrintf(ptrUart, "Enable pin - always on");
 		}
@@ -902,26 +902,26 @@ static int enablepinmode_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 	if (argc == 1)
 	{
 		uint32_t x;
-		SystemParams_t systemParams;
+		SystemParams_t systemParams;		//local 
 
 		x = abs(atol(argv[0]));
 
 		if (x <= 1)
 		{
-			memcpy(&systemParams, &NVM->SystemParams, sizeof(systemParams));
-			systemParams.enablePinMode = (EnablePinMode_t)x;
-			nvmWriteSystemParms(systemParams);
+			memcpy(&systemParams, &NVM->SystemParams, sizeof(systemParams));		//get current params
+			systemParams.enablePinMode = (EnablePinMode_t)x;						//change just enablepinmode
+			nvmWriteSystemParms(systemParams);										//write out to nvram
 			stepperCtrl.updateParamsFromNVM();
 
-			if (ENABLE_PIN_MODE_ENABLE == NVM->SystemParams.enablePinMode)
+			if (ENABLE_PIN_MODE_ACTIVE_HIGH == NVM->SystemParams.enablePinMode)
 			{
 				CommandPrintf(ptrUart, "Enable pin -  Enable Active High(%d)\n\r", (uint32_t)NVM->SystemParams.enablePinMode);
 			}
-			else if (ENABLE_PIN_MODE_ACTIVE_LOW_ENABLE == NVM->SystemParams.errorPinMode)
+			else if (ENABLE_PIN_MODE_ACTIVE_LOW == NVM->SystemParams.enablePinMode)
 			{
 				CommandPrintf(ptrUart, "Enable pin -  Enable active low(%d)\n\r", (uint32_t)NVM->SystemParams.enablePinMode);
 			}
-			else if (ENABLE_PIN_MODE_ALWAYS == NVM->SystemParams.errorPinMode)
+			else if (ENABLE_PIN_MODE_ALWAYS == NVM->SystemParams.enablePinMode)
 			{
 				CommandPrintf(ptrUart, "Enable pin -  Bidi error(%d)\n\r", (uint32_t)NVM->SystemParams.enablePinMode);
 			}

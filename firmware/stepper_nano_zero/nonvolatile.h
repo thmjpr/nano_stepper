@@ -12,6 +12,8 @@
 #ifndef __NONVOLATILE__H__
 #define __NONVOLATILE__H__
 
+#define NVM_FLASH_SIZE 16777//16767
+
 #include "calibration.h"
 #include "board.h"
 
@@ -23,20 +25,21 @@ typedef struct {
 } PIDparams_t;
 
 typedef struct {
-	int32_t currentMa;   //maximum current for the motor
-	int32_t currentHoldMa; //hold current for the motor
-	int32_t homeMa; //maximum current when error homing
-	int32_t homeHoldMa; //hold current when error homing
-	bool motorWiring;  //forward wiring of motor or reverse
+	int32_t currentMa;  		 //maximum current for the motor
+	int32_t currentHoldMa; 		//hold current for the motor
+	int32_t homeMa; 			//maximum current when error homing
+	int32_t homeHoldMa; 		//hold current when error homing
+	bool motorWiring;  			//forward wiring of motor or reverse
 	int32_t fullStepsPerRotation; //how many full steps per rotation is the motor
 	bool parametersValid;
 } MotorParams_t;
 
 typedef struct {
-	int32_t microsteps;    //number of microsteps on the dir/step pin interface from host
+	int32_t microsteps;    			//number of microsteps on the dir/step pin interface from host
 	RotationDir_t dirPinRotation;  //is the direction pin high for clockwise or counterClockWise
-	int32_t errorLimit;    //error limit before error pin asserts 65536==360degrees
-	ErrorPinMode_t errorPinMode;  //is error pin used for enable, error, or bidirectional
+	int32_t errorLimit;    			//error limit before error pin asserts 65536==360degrees
+	ErrorPinMode_t errorPinMode;  	//error output active high or low
+	EnablePinMode_t enablePinMode;  //enable input active high or low
 	feedbackCtrl_t controllerMode; //feedback mode for the controller
 	int32_t homePin; 				//if greater than zero this is the pin we use trigger home current settings
 	bool errorLogic; 				//if high and error will be high on output pin
@@ -65,7 +68,7 @@ typedef struct {
 } nvm_t;
 
 #ifdef NZS_FAST_CAL
-extern  const uint16_t  NVM_flash[16767];
+extern  const uint16_t  NVM_flash[NVM_FLASH_SIZE];
 #else
 extern  const uint16_t  NVM_flash[256];
 #endif

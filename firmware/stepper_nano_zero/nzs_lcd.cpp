@@ -364,22 +364,22 @@ void LCD::updateLCD(void)
 			switch (ptrStepperCtrl->getControlMode())
 			{
 			case CTRL_SIMPLE:
-				sprintf(str[0], "%03dRPM simp", RPM);
+				sprintf(str[0], "%03d RPM simp", RPM);
 				break;
 
 			case CTRL_POS_PID:
-				sprintf(str[0], "%03dRPM pPID", RPM);
+				sprintf(str[0], "%03d RPM pPID", RPM);
 				break;
 
 			case CTRL_POS_VELOCITY_PID:
-				sprintf(str[0], "%03dRPM vPID", RPM);
+				sprintf(str[0], "%03d RPM vPID", RPM);
 				break;
 
 			case CTRL_OPEN:
-				sprintf(str[0], "%03dRPM open", RPM);
+				sprintf(str[0], "%03d RPM open", RPM);
 				break;
 			case CTRL_OFF:
-				sprintf(str[0], "%03dRPM off", RPM);
+				sprintf(str[0], "%03d RPM off", RPM);
 				break;
 			default:
 				sprintf(str[0], "error %u", ptrStepperCtrl->getControlMode());

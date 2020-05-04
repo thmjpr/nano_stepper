@@ -20,9 +20,13 @@
 #include "angle.h"
 #include "eeprom.h"
 #include "steppin.h"
+//#include "wiring_private.h"
 
 #pragma GCC push_options
 #pragma GCC optimize ("-Ofast")
+
+//TODO:
+//can show direction/step/error/enable pin status on LCD, maybe just enable?
 
 eepromData_t PowerupEEPROM = { 0 };
 volatile bool enableState = true;
@@ -42,9 +46,9 @@ int menuInfo(int argc, char *argv[])
 
 	//Maybe show the values for 2s then go back?
 
-	sprintf(str[1], "v = %03d", volt);
-	sprintf(str[2], "t = %03d", temp);
-	sprintf(str[3], "x = ");
+	sprintf(str[0], "v = %03d", volt);
+	sprintf(str[1], "t = %03d", temp);
+	sprintf(str[2], "x = ");
 
 	str[0][10] = '\0';
 	str[1][10] = '\0';
@@ -69,7 +73,8 @@ int menuTestCal(int argc, char *argv[])
 	y = x / 100;
 	x = x - (y * 100);
 	x = abs(x);
-	sprintf(str, "%d.%02d deg", y, x);
+	sprintf(str, "%d.%02d deg", y, (int)x);
+	
 #ifndef DISABLE_LCD
 	Lcd.lcdShow("Cal Error", str, "");
 #endif
@@ -87,9 +92,10 @@ int menuTestCal(int argc, char *argv[])
 #endif
 }
 
+//Number of steps per revolution
 static  options_t stepOptions[]{
-		{"200"},
-		{"400"},
+		{"200"},		//1.8 deg
+		{"400"},		//0.9 deg
 		{""},
 };
 
@@ -124,7 +130,7 @@ int motorSteps(int argc, char *argv[])
 
 //Available motor currents
 static  options_t currentOptions[]{
-		{"0"},
+		{"0"},			//0 is not useful
 		{"100"},
 		{"200"},
 		{"300"},
@@ -227,6 +233,7 @@ int microsteps(int argc, char *argv[])
 		}
 		return i;
 	}
+	
 	int i, j;
 	i = NVM->SystemParams.microsteps;
 	for (j = 0; j < 9; j++)
@@ -294,8 +301,8 @@ int errorPin(int argc, char *argv[])
 
 #ifdef PIN_ENABLE
 static  options_t enablePinOptions[]{
-		{"Enable"},
-		{"!Enable"}, //error pin works like enable on step sticks
+		{"Enable"},			//Active high
+		{"!Enable"},		//Active low
 		{"Always enabled"},
 		{""}
 };
@@ -333,14 +340,14 @@ int dirPin(int argc, char *argv[])
 		i = atol(argv[0]);
 		SystemParams_t params;
 		memcpy((void *)&params, (void *)&NVM->SystemParams, sizeof(params));
-		if (i != params.dirPinRotation)
+		if ((RotationDir_t)i != params.dirPinRotation)
 		{
 			params.dirPinRotation = (RotationDir_t)i;
 			nvmWriteSystemParms(params);
 		}
 		return i;
 	}
-	return NVM->SystemParams.dirPinRotation;
+	return (int)NVM->SystemParams.dirPinRotation;
 }
 
 static  menuItem_t MenuMain[]{
@@ -381,7 +388,7 @@ static void enableInput(void)
 
 	if (enablePin != lastState)
 		{
-			WARNING("Enable now %d", enable);
+			WARNING("Enable now %d", enablePin);
 			lastState = enablePin;
 		}
 
@@ -499,11 +506,13 @@ void validateAndInitNVMParams(void)
 {
 	if (false == NVM->sPID.parametersValid)
 	{
+		LOG("sPID invalid %0x %0x %0x, %0x addr %0x", NVM->sPID.Ki, NVM->sPID.Kp, NVM->sPID.Kd, NVM->sPID.parametersValid, &NVM->sPID.parametersValid);
 		nvmWrite_sPID(0.9, 0.0001, 0.01);
 	}
 
 	if (false == NVM->pPID.parametersValid)
 	{
+		LOG("pPID invalid %0x", NVM->pPID.parametersValid);
 		nvmWrite_pPID(1.0, 0, 0);
 	}
 
@@ -514,12 +523,13 @@ void validateAndInitNVMParams(void)
 
 	if (false == NVM->SystemParams.parametersValid)
 	{
+		LOG("sys param invalid");
 		SystemParams_t params;
 		params.microsteps = 16;
 		params.controllerMode = CTRL_SIMPLE;
-		params.dirPinRotation = CW_ROTATION; 			//default to clockwise rotation when dir is high
+		params.dirPinRotation = RotationDir_t::CW_ROTATION; 			//default to clockwise rotation when dir is high
 		params.errorLimit = (int32_t)ANGLE_FROM_DEGREES(1.8);
-		params.errorPinMode = ERROR_PIN_MODE_ACTIVE_H; 	//default to active high
+		params.errorPinMode = ERROR_PIN_MODE_ACTIVE_LOW; 	//default to active low
 		params.enablePinMode = ENABLE_PIN_MODE_ALWAYS;	//default to always on
 		params.homePin = -1;
 		params.errorLogic = false;
@@ -552,9 +562,6 @@ static void syncBOD33(void)
 //Configure brownout level
 static void configure_bod(void)
 {
-	//syncBOD33();
-	//SYSCTRL->BOD33.reg=0; //disable BOD33 before starting
-	//syncBOD33();
 	SYSCTRL->BOD33.reg = SYSCTRL_BOD33_ACTION_INTERRUPT | //generate interrupt when BOD is triggered
 	SYSCTRL_BOD33_LEVEL(48) | //about 3.2V
 	//SYSCTRL_BOD33_HYST | //enable hysteresis
@@ -563,7 +570,7 @@ static void configure_bod(void)
 	LOG("BOD33 %02X", SYSCTRL->BOD33.reg);
 	SYSCTRL->INTENSET.reg |= SYSCTRL_INTENSET_BOD33DET;
 
-	NVIC_SetPriority(SYSCTRL_IRQn, 1); //make highest priority as we need to save eeprom
+	NVIC_SetPriority(SYSCTRL_IRQn, 1); //make highest priority as we need to save eeprom		//**FF only save eep in menu?
 	// Enable InterruptVector
 	NVIC_EnableIRQ(SYSCTRL_IRQn);
 }
@@ -586,6 +593,8 @@ void NZS::begin(void)
 
 #ifndef CMD_SERIAL_PORT
 	SysLogInit(&Serial5, LOG_DEBUG); //use SWO for the sysloging
+	//pinPeripheral(PIN_TXD, PIO_SERCOM_ALT);
+	//pinPeripheral(PIN_RXD, PIO_SERCOM_ALT);
 #else
 	SysLogInit(NULL, LOG_WARNING);
 #endif
@@ -623,14 +632,9 @@ void NZS::begin(void)
 #ifndef DISABLE_LCD
 	configure_bod();		//configure the BOD
 	LOG("Testing LCD");
-	Lcd.begin(&stepperCtrl);
-	Lcd.showSplash();
-
-	#ifdef A5995_DRIVER
-		//Lcd.lcdShow("MisfitTech", "NEMA 23", VERSION);
-	#else
-		//Lcd.lcdShow("MisfitTech", "NEMA 17", VERSION);
-	#endif
+	Lcd.begin(&stepperCtrl);		//Attempt connection to LCD
+	//Lcd.present = true/false
+	Lcd.showSplash();				//Splash screen
 #endif
 
 	LOG("command init!");
