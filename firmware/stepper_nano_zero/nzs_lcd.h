@@ -60,7 +60,7 @@ class LCD
 		int32_t buttonState;
 		static const uint8_t icon_splash_screen[];
 
-		void updateLCD(void);
+		void showStatus(void); 						//Calculate rpm, error, show on display
 		void showMenu(void);
 		void updateMenu(void);
 		void showOptions(void);
@@ -70,8 +70,8 @@ class LCD
 		void forceMenuActive(void);
 		void setMenu(menuItem_t *pMenu);
 		void begin(StepperCtrl *ptrStepperCtrl);	//sets up the LCD
-		void process(void);							//processes the LCD and updates as needed
 		void showSplash(void);
+		void process(void);							//determine what to display
 		void lcdShow(const char *line1, const char *line2,const char *line3);
 		void showCalibration(int current_step);
 };

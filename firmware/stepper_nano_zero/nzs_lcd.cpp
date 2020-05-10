@@ -283,7 +283,7 @@ void __attribute__((optimize("Ofast")))LCD::process(void)
 
 	if (false == menuActive || ptrMenu == NULL)
 	{
-		updateLCD();
+		showStatus();
 	}
 	else
 	{
@@ -302,126 +302,158 @@ void __attribute__((optimize("Ofast")))LCD::process(void)
 	}
 }
 
-void LCD::updateLCD(void)
+//--------------------------------------------
+// 
+void LCD::showStatus()
 {
 	skip_when_no_display();
-
-	char str[3][25];
-	static int highRPM = 0;
-	int32_t y, z, err;
-
-	static int64_t lastAngle, deg;
-	static int32_t RPM = 0, lasttime = 0;
-
-	bool state;
-	static int32_t dt = 40;
+	
+	char buf[30] = { 0 };
+	int32_t error;
 	static uint32_t t0 = 0;
-
 	static bool rpmDone = false;
+	static int64_t lastAngle, degrees;
+	static int32_t rpm = 0, lasttime = 0, dt =0;
 
-	if ((millis() - t0) > 500)
-	{
-		int32_t x, d;
-
-		//do first half of RPM measurement
-		if (!rpmDone)
+	if ((millis() - t0) > 500)		//update every 500ms
 		{
-			//LOG("loop time is %dus",ptrStepperCtrl->getLoopTime());
-			lastAngle = ptrStepperCtrl->getCurrentAngle();
-			lasttime = millis();
-			rpmDone = true;
-			return;
+			int32_t x = 0, y, d;
+
+			//do first half of RPM measurement
+			if(!rpmDone)
+			{
+				//LOG("loop time is %dus",ptrStepperCtrl->getLoopTime());
+				lastAngle = ptrStepperCtrl->getCurrentAngle();
+				lasttime = millis();
+				rpmDone = true;
+				return;
+			}
+
+			//do the second half of rpm measurement and update LCD.
+			if(rpmDone && (millis() - lasttime) > (dt))
+			{
+				rpmDone = false;
+				degrees = ptrStepperCtrl->getCurrentAngle();
+				y = millis() - lasttime;
+				t0 = millis();
+				d = abs((int64_t)(lastAngle - degrees));
+
+				if (d > 0)	//if moving
+					{
+						x = ((int64_t)d * (60 * 1000UL)) / ((int64_t)y * ANGLE_STEPS);
+					}
+
+				lastAngle = degrees;
+				rpm = (int32_t)x; 				//(7*RPM+x)/8; //average RPMs c
+				if(rpm > 500)
+					dt = 10;
+				else //if (RPM < 100)
+					dt = 100;
+	
+				display.clearDisplay();
+	
+				//RPM
+				display.setTextSize(1);
+				display.setCursor(0, 0);
+				display.print("RPM:");
+
+				display.setTextSize(2);
+				display.setCursor(0, 10);
+				sprintf(buf, "%03d", rpm);
+				display.println(buf);
+	
+				//Error
+				error = ptrStepperCtrl->getLoopError();
+				error = (error * 360 * 100) / (int32_t)ANGLE_STEPS;
+				
+				display.setTextSize(1);
+				display.setCursor(64, 0);
+				if (error > 0)
+					display.print("Error:");			//pos
+				else
+					display.print("Error:   -");		//neg
+		
+				x = error / 100;
+				
+				if(error > 9999)
+					sprintf(buf, "%03d", x);    									//print xxx amount of error								
+				else if(error > 0)
+					sprintf(buf, "%02d.%02d", x, abs(error - (x * 100)));     		//print xx.yy amount of error
+				else if(error > -9999)
+					sprintf(buf, "%02d.%02d", abs(x), abs(error - (x * 100)));     	//print -xx.yy amount of error
+				else
+					sprintf(buf, "%03d", abs(x));								   	//print -xxx amount of error
+				
+				display.setTextSize(2);
+				display.setCursor(64, 12);		
+				display.println(buf);
+
+				//Degrees
+				display.setTextSize(1);
+				display.setCursor(0, 35);
+				display.print("Deg:");
+				degrees = (degrees * 360 * 10) / (int32_t)ANGLE_STEPS;
+
+				// if too large to display
+				if(abs(degrees) > 9999)
+				{
+					degrees = degrees / 1000;
+					x = degrees / 10;
+					y = abs(degrees - (x * 10));
+					sprintf(buf, "%03d.%01uk", x, y);
+				}
+				else
+				{
+					x = degrees / 10;
+					y = abs(degrees - (x * 10));
+					sprintf(buf, "%03d.%01u", x, y);
+				}
+	
+				display.setCursor(0, 45);
+				display.println(buf);
+	
+				//put degrees symbol..
+	
+	
+				//----------------- control mode
+				display.setTextSize(1);
+				display.setCursor(90, 52);
+	
+				switch (ptrStepperCtrl->getControlMode())
+				{
+				case feedbackCtrl::SIMPLE:
+					sprintf(buf, "simpl");
+					break;
+
+				case feedbackCtrl::POS_PID:
+					sprintf(buf, "pPID");
+					break;
+
+				case feedbackCtrl::POS_VELOCITY_PID:
+					sprintf(buf, "vPID");
+					break;
+
+				case feedbackCtrl::OPEN:
+					sprintf(buf, "open");
+					break;
+				case feedbackCtrl::OFF:
+					sprintf(buf, "off");
+					break;
+				default:
+					display.setCursor(80, 52);
+					sprintf(buf, "err %u", (uint32_t)ptrStepperCtrl->getControlMode());
+					break;
+				}
+				display.println(buf);
+	
+				//Er En, !Er !En maybe?
+	
+	
+				display.display();   		//update
+			}
 		}
-
-		//do the second half of rpm measurement and update LCD.
-		if (rpmDone && (millis() - lasttime) > (dt))
-		{
-			rpmDone = false;
-			deg = ptrStepperCtrl->getCurrentAngle();
-			y = millis() - lasttime;
-			err = ptrStepperCtrl->getLoopError();
-			t0 = millis();
-			d = (int64_t)(lastAngle - deg);
-			d = abs(d);
-			x = 0;
-
-			if (d > 0)
-			{
-				x = ((int64_t)d * (60 * 1000UL)) / ((int64_t)y * ANGLE_STEPS);
-			}
-
-			lastAngle = deg;
-			RPM = (int32_t)x; //(7*RPM+x)/8; //average RPMs
-			if (RPM > 500)
-			{
-				dt = 10;
-			}
-			else //if (RPM < 100)
-			{
-				dt = 100;
-			}
-
-			str[0][0] = '\0';
-			//LOG("RPMs is %d, %d, %d",(int32_t)x,(int32_t)d,(int32_t)y);
-			switch (ptrStepperCtrl->getControlMode())
-			{
-			case feedbackCtrl::SIMPLE:
-				sprintf(str[0], "%03d RPM simp", RPM);
-				break;
-
-			case feedbackCtrl::POS_PID:
-				sprintf(str[0], "%03d RPM pPID", RPM);
-				break;
-
-			case feedbackCtrl::POS_VELOCITY_PID:
-				sprintf(str[0], "%03d RPM vPID", RPM);
-				break;
-
-			case feedbackCtrl::OPEN:
-				sprintf(str[0], "%03d RPM open", RPM);
-				break;
-			case feedbackCtrl::OFF:
-				sprintf(str[0], "%03d RPM off", RPM);
-				break;
-			default:
-				sprintf(str[0], "error %u", (uint32_t)ptrStepperCtrl->getControlMode());
-				break;
-			}
-
-			err = (err * 360 * 100) / (int32_t)ANGLE_STEPS;
-			//LOG("error is %d %d %d",err,(int32_t)ptrStepperCtrl->getCurrentLocation(),(int32_t)ptrStepperCtrl->getDesiredLocation());
-			z = (err) / 100;
-			y = abs(err - (z * 100));
-
-			sprintf(str[1], "%01d.%02d err", z, y);
-			deg = ptrStepperCtrl->getDesiredAngle();
-
-#ifndef NZS_LCD_ABSOLUTE_ANGLE
-			deg = deg & ANGLE_MAX; //limit to 360 degrees
-#endif
-
-			deg = (deg * 360 * 10) / (int32_t)ANGLE_STEPS;
-
-			// if too large to display
-			if (abs(deg) > 9999)
-			{
-				deg = deg / 1000;
-				x = deg / 10;
-				y = abs(deg - (x * 10));
-				sprintf(str[2], "%03d.%01uKdeg", x, y);
-			}
-
-			else
-			{
-				x = deg / 10;
-				y = abs(deg - (x * 10));
-				sprintf(str[2], "%03d.%01udeg", x, y);
-			}
-
-			lcdShow(str[0], str[1], str[2]);
-		}
-	}
 }
+
 
 //--------------------------------------------
 // 
@@ -436,10 +468,12 @@ void LCD::showCalibration(int current_step)
 
 	display.clearDisplay();
 	display.setTextSize(1);
+	display.setTextColor(WHITE);
+	
 	display.setCursor(0, 0);
 	display.print("CAL");
 	display.setCursor(0, 57);
-	display.setTextColor(WHITE);
+
 	sprintf(buf, "%03d/%03d", current_step, CALIBRATION_TABLE_SIZE);
 	display.println(buf);
 
@@ -453,7 +487,7 @@ void LCD::showCalibration(int current_step)
 		display.print("Saving");
 	}
 
-	//could also put a deviation plot, etc. 
+	//TODO: could also put a deviation plot, etc. 
 	display.display();		//update
 }
 

@@ -42,15 +42,15 @@ int menuInfo(int argc, char *argv[])
 {
 	skip_when_no_display();
 
-	float temp, volt;
+	int temp, volt;
 	char str[3][20];
 	
 	adc.begin();
-	temp = adc.getTemperature();
-	volt = adc.GetMotorVoltage();
+	temp = (int)adc.getTemperature();
+	volt = (int)adc.GetMotorVoltage();
 
-	sprintf(str[0], "v = %0.1f", volt);
-	sprintf(str[1], "t = %0.1fC", temp);
+	sprintf(str[0], "v = %03d", volt);
+	sprintf(str[1], "t = %03dC", temp);
 	sprintf(str[2], "x = ");
 
 	str[0][10] = '\0';
@@ -608,23 +608,6 @@ void NZS::begin(void)
 #endif
 	
 	LOG("Power up!");
-	
-	while (0)
-	{
-		volatile float y;
-		volatile uint32_t temp;
-		volatile int x = 0;
-		
-		y = adc.GetMotorVoltage();
-		temp = adc.getTemperature();
-		
-		x = adc.read_blocking(adcPortMap::_PA04);
-		x = adc.read_blocking(adcPortMap::_PB03);
-	
-		delay(100);
-	}
-	
-	
 
 	if (digitalRead(PIN_USB_PWR))
 	{
@@ -665,7 +648,25 @@ void NZS::begin(void)
 	LOG("command init!");
 	commandsInit();					//setup command handler system
 	stepCtrlError = stepCtrlError::No_CAL;
-
+	
+		
+	while (0)
+	{
+		volatile float y;
+		volatile uint32_t temp;
+		volatile int x = 0;
+		
+		y = adc.GetMotorVoltage();
+		temp = adc.getTemperature();
+		
+		x = adc.read_blocking(adcPortMap::_PA04);
+		x = adc.read_blocking(adcPortMap::_PB03);
+	
+		delay(100);
+		//Lcd.process();
+	}
+	
+	
 	while (stepCtrlError::No_ERROR != stepCtrlError)
 	{
 		LOG("init the stepper controller");
