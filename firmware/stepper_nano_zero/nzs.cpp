@@ -470,44 +470,52 @@ static void enableInput(void)
 	lastState = enableState;
 }
 
-//Timer 5 interrupt - set to occur at rate NZS_CONTROL_LOOP_HZ?
-//seems like its set to TC5 overflow rate.. why is it occurring so often? **FFF
+//Timer 5 interrupt - set to occur at rate NZS_CONTROL_LOOP_HZ.
+
 void TC5_Handler()
 {
-	interrupts();		//allow other interrupts
+	int error;
+	
+	interrupts(); 						//allow other interrupts
+	TC5->COUNT16.INTFLAG.bit.MC0 = 1; 	//Clear compare match flag
+	
+	error = (stepperCtrl.processFeedback());  //handle the control loop
+	RED_LED(error); 					//light red LED when any error
 
-	if (TC5->COUNT16.INTFLAG.bit.OVF == 1)
+#ifdef PIN_ERROR						//does it need to be handled here? maybe.
+	
+	bool level = !NVM->SystemParams.errorLogic;
+	//GPIO_OUTPUT(PIN_ERROR); should be covered elsewhere?
+	
+	if(error)
 	{
-		int error;
-
-		error = (stepperCtrl.processFeedback()); //handle the control loop
-		RED_LED(error);
-
-#ifdef PIN_ERROR
-		GPIO_OUTPUT(PIN_ERROR);
-		
-		bool level = !NVM->SystemParams.errorLogic;
-		
-		if(error)
-			digitalWrite(PIN_ERROR, level);
+		if (level)
+			GPIO_HIGH(PIN_ERROR)
 		else
-			digitalWrite(PIN_ERROR, !level);
-#else
-		if (NVM->SystemParams.errorPinMode == ERROR_PIN_MODE_ERROR)
-		{
-			GPIO_OUTPUT(PIN_ERROR);
-			if (error)
-			{	//assume high is inactive and low is active on error pin
-				digitalWrite(PIN_ERROR, LOW);
-			}
-			else
-			{
-				digitalWrite(PIN_ERROR, HIGH);
-			}
-		}
-#endif
-		TC5->COUNT16.INTFLAG.bit.OVF = 1;    // writing a one clears the flag ovf flag
+			GPIO_LOW(PIN_ERROR)
 	}
+	else
+	{
+		if (!level)
+			GPIO_HIGH(PIN_ERROR)	
+		else
+			GPIO_LOW(PIN_ERROR)
+	}
+#else
+	if (NVM->SystemParams.errorPinMode == ERROR_PIN_MODE_ERROR)
+	{
+		GPIO_OUTPUT(PIN_ERROR);
+		if (error)
+		{
+				//assume high is inactive and low is active on error pin
+			digitalWrite(PIN_ERROR, LOW);
+		}
+		else
+		{
+			digitalWrite(PIN_ERROR, HIGH);
+		}
+	}
+#endif
 
 }
 

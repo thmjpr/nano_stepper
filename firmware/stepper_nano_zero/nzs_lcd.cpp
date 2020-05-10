@@ -68,7 +68,7 @@ void LCD::begin(StepperCtrl *ptrsCtrl)
 		WARNING("No display found, LCD will not be used");
 	}
 
-	Wire.setClock(800000);
+	Wire.setClock(800000);		//Set I2C clock 800kHz
 }
 
 void __attribute__((optimize("Ofast"))) LCD::lcdShow(const char *line1, const char *line2, const char *line3)

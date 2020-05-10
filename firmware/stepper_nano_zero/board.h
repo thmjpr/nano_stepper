@@ -25,19 +25,19 @@
 
 
 //Optimizations
-#define NZS_FAST_CAL		// define this to use 32k of flash for fast calibration table
-#define NZS_FAST_SINE		//uses 2048 extra bytes to implement faster sine tables
-#define NZS_AS5047_PIPELINE	//does a pipeline read of encoder, which is slightly faster  //try no pipeline...?
+#define NZS_FAST_CAL			//define this to use 32k of flash for fast calibration table
+#define NZS_FAST_SINE			//uses 2048 extra bytes to implement faster sine tables
+#define NZS_AS5047_PIPELINE		//does a pipeline read of encoder, which is slightly faster 
 #define NZS_CONTROL_LOOP_HZ (6000) //update rate of control loop
 
 #define NZS_LCD_ABSOLUTE_ANGLE  //define this to show angle from zero in positive and negative direction
-// for example 2 rotations from start will be angle of 720 degrees
+								// for example 2 rotations from start will be angle of 720 degrees
 
 //#define ENABLE_PHASE_PREDICTION //this enables prediction of phase at high velocity to increase motor speed
 //as of FW0.11 it is considered development only
 
 #define BUILD_DATE __DATE__		//Build date, 11 char long
-#define VERSION "FW: 0.39"		//this is what prints on LCD during splash screen
+#define VERSION "FW: 0.40"		//this is what prints on LCD during splash screen
 
 //Define this to allow command out serial port, else hardware serial is debug log
 //#define CMD_SERIAL_PORT

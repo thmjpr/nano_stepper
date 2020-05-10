@@ -21,6 +21,8 @@
 #pragma GCC optimize ("-Ofast")
 
 #define WAIT_TC16_REGS_SYNC(x) while(x->COUNT16.STATUS.bit.SYNCBUSY);
+#define n16_BIT_MAX		65536
+static_assert((100 < (F_CPU / NZS_CONTROL_LOOP_HZ)) & ((F_CPU / NZS_CONTROL_LOOP_HZ) < n16_BIT_MAX), "control loop frequency bad");
 
 volatile bool TC5_ISR_Enabled = false;
 extern ADC_Peripheral adc;
@@ -31,49 +33,40 @@ void setupTCInterrupts()
 	GCLK->CLKCTRL.reg = (uint16_t)(GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN_GCLK0 | GCLK_CLKCTRL_ID(GCM_TC4_TC5));
 	while (GCLK->STATUS.bit.SYNCBUSY);
 
-	TC5->COUNT16.CTRLA.reg &= ~TC_CTRLA_ENABLE;   // Disable TCx
-	WAIT_TC16_REGS_SYNC(TC5)                      // wait for sync
-
-	TC5->COUNT16.CTRLA.reg |= TC_CTRLA_MODE_COUNT16;   // Set Timer counter Mode to 16 bits
+	TC5->COUNT16.CTRLA.bit.ENABLE = 0;									// Disable TCx
+	//TC5->COUNT16.CTRLA.bit.SWRST = 1; 									// Reset Timer
+	TC5->COUNT16.CTRLA.bit.MODE = TC_CTRLA_MODE_COUNT16_Val;			// Set Timer counter Mode to 16 bits
+	TC5->COUNT16.CTRLA.bit.WAVEGEN = TC_CTRLA_WAVEGEN_MFRQ_Val;			// Set TC as normal Normal Frq
+	TC5->COUNT16.CTRLA.bit.PRESCALER = TC_CTRLA_PRESCALER_DIV1_Val;		// Set prescaler - none
+	TC5->COUNT16.CC[0].reg = (F_CPU / NZS_CONTROL_LOOP_HZ);				//Set capture channel interrupt, 48MHz/6000Hz 0.2ms
 	WAIT_TC16_REGS_SYNC(TC5)
-
-	TC5->COUNT16.CTRLA.reg |= TC_CTRLA_WAVEGEN_MFRQ; // Set TC as normal Normal Frq
-	WAIT_TC16_REGS_SYNC(TC5)
-
-	TC5->COUNT16.CTRLA.reg |= TC_CTRLA_PRESCALER_DIV1;   // Set prescaler - none
-	WAIT_TC16_REGS_SYNC(TC5)
-
-	TC5->COUNT16.CC[0].reg = F_CPU / NZS_CONTROL_LOOP_HZ;	//Set capture channel interrupt, 
-	WAIT_TC16_REGS_SYNC(TC5)
-
+		
+	//TC5->COUNT16.DBGCTRL.bit.DBGRUN = 0;		//Run timer when debug stopped yes (1) or no (0)
 	TC5->COUNT16.INTENSET.reg = 0;              // disable all interrupts
-	TC5->COUNT16.INTENSET.bit.OVF = 1;          // enable overfollow
-	//  TC5->COUNT16.INTENSET.bit.MC0 = 1;         // enable compare match to CC0
-
-	NVIC_SetPriority(TC5_IRQn, 2);
-
-	// Enable InterruptVector
-	NVIC_EnableIRQ(TC5_IRQn);
-
-	// Enable TC
-	TC5->COUNT16.CTRLA.reg |= TC_CTRLA_ENABLE;
+	//TC5->COUNT16.INTENSET.bit.OVF = 1;          // enable overflow interrupt
+	TC5->COUNT16.INTENSET.bit.MC0 = 1;         // enable compare match to CC0
 	WAIT_TC16_REGS_SYNC(TC5)
+		
+	//Interrupt
+	NVIC_ClearPendingIRQ(TC5_IRQn);				//Clear any pending
+	NVIC_SetPriority(TC5_IRQn, 2);				//Set priority of interrupt to lowest
+	NVIC_EnableIRQ(TC5_IRQn);					//Enable InterruptVector
+	
+	TC5->COUNT16.CTRLA.bit.ENABLE = 1; 			//Enable timer TCx
 }
 
 static void enableTCInterrupts()
 {
 	TC5_ISR_Enabled = true;
 	NVIC_EnableIRQ(TC5_IRQn);
-	TC5->COUNT16.INTENSET.bit.OVF = 1;
-	//  TC5->COUNT16.CTRLA.reg |= TC_CTRLA_ENABLE;    //Enable TC5
-	//  WAIT_TC16_REGS_SYNC(TC5)                      //wait for sync
+	TC5->COUNT16.INTENSET.bit.MC0 = 1;		//set compare match
 }
 
 static void disableTCInterrupts()
 {
 	TC5_ISR_Enabled = false;
 	//NVIC_DisableIRQ(TC5_IRQn);
-	TC5->COUNT16.INTENCLR.bit.OVF = 1;
+	TC5->COUNT16.INTENCLR.bit.MC0 = 1;		//clear compare match
 }
 
 static bool enterCriticalSection()
@@ -478,7 +471,7 @@ bool StepperCtrl::calibrateEncoder(LCD * lcd_d)
 		cal = calTable.getCal(desiredAngle);
 		lcd_d->showCalibration(j + 1);
 
-		delay(200);
+		delay(20);//200
 		mean = sampleMeanEncoder(200);
 
 		LOG("Previous cal distance %d, %d, mean %d, cal %d", j, cal - Angle((uint16_t)mean), mean, (uint16_t)cal);
@@ -496,7 +489,7 @@ bool StepperCtrl::calibrateEncoder(LCD * lcd_d)
 
 		if (400 == motorParams.fullStepsPerRotation)
 		{
-			delay(100);
+			delay(10);//100
 			updateStep(0, 1);
 			// move one half step at a time, a full step move could cause a move backwards depending on how current ramps down
 			steps += A4954_NUM_MICROSTEPS / 2;
@@ -1047,6 +1040,7 @@ bool StepperCtrl::pidFeedback(int64_t desiredLoc, int64_t currentLoc, Control_t 
 		error = (desiredLoc - y); //error is currentPos-desiredPos
 		Iterm += (pPID.Ki * error);
 
+		//If homing pin is used (could be bi-dir?)
 		if (systemParams.homePin > 0 && digitalRead(systemParams.homePin) == 0)
 		{
 			ma = motorParams.homeMa;
@@ -1215,7 +1209,7 @@ bool StepperCtrl::simpleFeedback(int64_t desiredLoc, int64_t currentLoc, Control
 		int32_t u, x, kp;
 
 		//error is in units of degrees when 360 degrees == 65536
-		error = (desiredLoc - y);//measureError(); //error is currentPos-desiredPos
+		error = (desiredLoc - y);	//measureError(); //error is currentPos-desiredPos
 
 		if (i >= N_DATA)
 		{
@@ -1454,8 +1448,11 @@ bool StepperCtrl::processFeedback(void)
 
 	desiredLoc = getDesiredLocation();
 	currentLoc = getCurrentLocation();
-	mean = (31 * mean + currentLoc + 16) / 32;
+	mean = (31 * mean + currentLoc + 16) / 32;		//moving average?
 
+	
+	//**FF */Should have some configurable anti-hunt or similar.
+	
 #ifdef A5995_DRIVER //the A5995 is has more driver noise
 	if (abs(currentLoc - mean) < ANGLE_FROM_DEGREES(0.9))
 #else

@@ -16,20 +16,20 @@
 #include <stdio.h>
 #include "board.h"
 
-#define AS5047D_CMD_NOP (0x0000)
-#define AS5047D_CMD_ERRFL (0x0001)
-#define AS5047D_CMD_PROG (0x0003)
-#define AS5047D_CMD_DIAAGC (0x3FFC)
-#define AS5047D_CMD_MAG (0x3FFD)
-#define AS5047D_CMD_ANGLEUNC (0x3FFE)
-#define AS5047D_CMD_ANGLECOM (0x3FFF)
+#define AS5047D_CMD_NOP		(0x0000)		//
+#define AS5047D_CMD_ERRFL	(0x0001)		//Error register
+#define AS5047D_CMD_PROG	(0x0003)		//Programming
+#define AS5047D_CMD_DIAAGC	(0x3FFC)		//Diagnostic and agc
+#define AS5047D_CMD_MAG		(0x3FFD)		//cordic magnitude
+#define AS5047D_CMD_ANGLEUNC (0x3FFE)		//Measured angle without dynamic error compensation
+#define AS5047D_CMD_ANGLECOM (0x3FFF)		//Measured angle with dynamic error compensation
 
-#define AS5048A_CMD_NOP (0x0000)
-#define AS5048A_CMD_ERRFL (0x0001)
-#define AS5048A_CMD_PROG (0x0003)
-#define AS5048A_CMD_DIAAGC (0x3FFD)
-#define AS5048A_CMD_MAG (0x3FFE)
-#define AS5048A_CMD_ANGLE (0x3FFF)
+#define AS5048A_CMD_NOP		(0x0000)
+#define AS5048A_CMD_ERRFL	(0x0001)
+#define AS5048A_CMD_PROG	(0x0003)
+#define AS5048A_CMD_DIAAGC	(0x3FFD)
+#define AS5048A_CMD_MAG		(0x3FFE)
+#define AS5048A_CMD_ANGLE	(0x3FFF)
 
 #pragma GCC push_options
 #pragma GCC optimize("-Ofast")
@@ -66,7 +66,7 @@ boolean AS5047D::begin(int csPin)
 	digitalWrite(PIN_SCK, LOW);
 	digitalWrite(PIN_MISO, LOW);
 	pinMode(PIN_MISO, OUTPUT);
-	delay(1000);
+	delay(500);
 
 	digitalWrite(PIN_AS5047D_CS, HIGH); //pull CS high
 #ifdef PIN_AS5047D_PWR
@@ -217,7 +217,6 @@ int16_t AS5047D::readEncoderAnglePipeLineRead(void)
 
 	data = data & 0x3FFF; //mask off the error and parity bits
 	GPIO_HIGH(chipSelectPin);
-
 	
 	//TODO we really should check for errors and return a negative result or something
 	return data;
