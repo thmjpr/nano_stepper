@@ -87,7 +87,7 @@ Angle CalibrationTable::fastReverseLookup(Angle encoderAngle)
 		return reverseLookup(encoderAngle);
 	}
 #else
-	return reverseLookup(encoderAngle)
+	return reverseLookup(encoderAngle);
 #endif
 }
 
@@ -101,7 +101,7 @@ Angle CalibrationTable::reverseLookup(Angle encoderAngle)
 	min = (uint16_t)table[0].value;
 	max = min;
 
-	for (i = 0; i < CALIBRATION_TABLE_SIZE; i++)
+	for (i = 0; i < CALIBRATION_TABLE_SIZE; i++)		//Search table for min, max
 	{
 		x = (uint16_t)table[i].value;
 		if (x < min)
@@ -167,8 +167,9 @@ Angle CalibrationTable::reverseLookup(Angle encoderAngle)
 		i++;
 	}
 	ERROR("WE did something wrong");
-
-	//safe shutdown //**FFF
+	//safe shutdown //**FFF if no cal it will arrive here though..
+	
+	return 0;
 }
 
 void CalibrationTable::smoothTable(void)
@@ -285,7 +286,7 @@ void CalibrationTable::saveToFlash(void)
 	}
 	data.status = true;
 
-	LOG("Writting Calbiration to Flash");
+	LOG("Writing calibration to Flash");
 	nvmWriteCalTable(&data, sizeof(data));
 
 	memset(&data, 0, sizeof(data));
@@ -300,7 +301,7 @@ void CalibrationTable::loadFromFlash(void)
 {
 	FlashCalData_t data;
 	int i;
-	LOG("Reading Calbiration to Flash");
+	LOG("Reading calibration from Flash");
 	memcpy(&data, &NVM->CalibrationTable, sizeof(data));
 	for (i = 0; i < CALIBRATION_TABLE_SIZE; i++)
 	{
@@ -313,7 +314,7 @@ void CalibrationTable::loadFromFlash(void)
 bool CalibrationTable::flashGood(void)
 {
 	LOG("calibration table status is: %d", NVM->CalibrationTable.status);
-	return NVM->CalibrationTable.status;
+	return (bool)NVM->CalibrationTable.status;
 }
 
 void CalibrationTable::createFastCal(void)
@@ -322,17 +323,16 @@ void CalibrationTable::createFastCal(void)
 	int32_t i;
 	uint16_t cs = 0;
 	uint16_t data[256];
-	int32_t j;
-	j = 0;
-	cs = 0;
+	int32_t j = 0;
+
 	LOG("setting fast calibration");
 	for (i = 0; i < 16384; i++)
 	{
-
 		uint16_t x;
 		x = reverseLookup(i * 4);
 		data[j] = x;
 		j++;
+		
 		if (j >= 256)
 		{
 			flashWrite(&NVM->FastCal.angle[i - 255], data, 256 * sizeof(uint16_t));
@@ -359,9 +359,9 @@ void CalibrationTable::updateFastCal(void)
 #ifdef NZS_FAST_CAL
 	int32_t i;
 	uint16_t cs = 0;
-	uint16_t data[256];
 	int32_t j;
 	bool NonZero = false;
+	
 	for (i = 0; i < 16384; i++)
 	{
 		cs += NVM->FastCal.angle[i];
@@ -386,7 +386,7 @@ void CalibrationTable::init(void)
 {
 	int i;
 
-	if (true == flashGood())
+	if (true == flashGood())		//Check if valid motor calibration numbers present in Flash
 	{
 		loadFromFlash();
 		updateFastCal();

@@ -4,16 +4,17 @@
 #include "stepper_controller.h"
 #include <stdlib.h>
 #include "nonvolatile.h"
-#include "reset.h"
+#include "Reset.h"
 #include "nzs.h"
 #include "ftoa.h"
 #include "board.h"
 #include "eeprom.h"
 #include "steppin.h"
 
+#define COMMANDS_PROMPT (":>")
+
 extern int32_t dataEnabled;
 
-#define COMMANDS_PROMPT (":>")
 sCmdUart UsbUart;
 sCmdUart SerialUart;
 sCmdUart HostUart; 			//uart on the step/dir pins
@@ -147,19 +148,23 @@ sCommand Cmds[] =
 static int debug_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	uint32_t i;
+	
 	if (argc >= 1)
 	{
 		i = atol(argv[0]);
 		SysLogDebug(i);
 	}
+	
+	return 0;
 }
 
 static int getsteps_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	int32_t s;
+	
 	s = (int32_t)getSteps();
-	//	s=(int32_t)stepperCtrl.getSteps();
 	CommandPrintf(ptrUart, "steps %" PRIi32 "\n\r", s);
+	
 	return 0;
 }
 
@@ -170,6 +175,7 @@ static int geterror_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 	f = ANGLE_T0_DEGREES(stepperCtrl.getLoopError());
 	ftoa(f, str, 2, 'f');
 	CommandPrintf(ptrUart, "error %s deg", str);
+	
 	return 0;
 }
 
@@ -186,6 +192,7 @@ static int errorpin_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 		stepperCtrl.updateParamsFromNVM();
 	}
 	CommandPrintf(ptrUart, "error pin assert level is %d\n\r", NVM->SystemParams.errorLogic);
+	
 	return 0;
 }
 
@@ -204,6 +211,7 @@ static int enablepin_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 		stepperCtrl.updateParamsFromNVM();
 	}
 	CommandPrintf(ptrUart, "enable pin assert level is %d\n\r", NVM->SystemParams.enableLogic);
+	
 	return 0;
 }
 
@@ -242,6 +250,7 @@ static int pinread_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 		ret |= 0x40;
 	}
 	CommandPrintf(ptrUart, "0x%02X\n\r", ret);
+	
 	return 0;
 }
 
@@ -305,12 +314,14 @@ static int setpos_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 		stepperCtrl.setAngle(a);
 		return 0;
 	}
+	
 	return 1;
 }
 
 static int eepromwrite_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	eepromFlush();
+	
 	return 0;
 }
 
@@ -358,6 +369,7 @@ static int eepromsetloc_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 	x = (uint32_t)PowerupEEPROM.encoderAngle - (uint32_t)stepperCtrl.getEncoderAngle();
 	deg = PowerupEEPROM.angle - x;
 	stepperCtrl.setAngle(deg);
+	
 	return 0;
 }
 
@@ -659,19 +671,19 @@ static int ctrlmode_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 	{
 		switch (NVM->SystemParams.controllerMode)
 		{
-		case CTRL_OFF:
+		case feedbackCtrl::OFF:
 			CommandPrintf(ptrUart, "controller Off(0)");
 			return 0;
-		case CTRL_OPEN:
+		case feedbackCtrl::OPEN:
 			CommandPrintf(ptrUart, "controller Open-loop(1)");
 			return 0;
-		case CTRL_SIMPLE:
+		case feedbackCtrl::SIMPLE:
 			CommandPrintf(ptrUart, "controller Simple-Position-PID(2)");
 			return 0;
-		case CTRL_POS_PID:
+		case feedbackCtrl::POS_PID:
 			CommandPrintf(ptrUart, "controller Current-Position-PID(3)");
 			return 0;
-		case CTRL_POS_VELOCITY_PID:
+		case feedbackCtrl::POS_VELOCITY_PID:
 			CommandPrintf(ptrUart, "controller Velocity-PID(4)");
 			return 0;
 		}
@@ -682,32 +694,33 @@ static int ctrlmode_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 	{
 		uint32_t x;
 
-		x = atol(argv[0]);
-
+		x = atol(argv[0]);		
+		
+		//If in enum range
 		if (x <= 4)
 		{
 			SystemParams_t systemParams;
 
 			memcpy(&systemParams, &NVM->SystemParams, sizeof(systemParams));
-			systemParams.controllerMode = (feedbackCtrl_t)(x);
+			systemParams.controllerMode = (feedbackCtrl)(x);
 			nvmWriteSystemParms(systemParams);
 			stepperCtrl.updateParamsFromNVM();
 
 			switch (NVM->SystemParams.controllerMode)
 			{
-			case CTRL_OFF:
+			case feedbackCtrl::OFF:
 				CommandPrintf(ptrUart, "controller Off(0)");
 				return 0;
-			case CTRL_OPEN:
+			case feedbackCtrl::OPEN:
 				CommandPrintf(ptrUart, "controller Open-loop(1)");
 				return 0;
-			case CTRL_SIMPLE:
+			case feedbackCtrl::SIMPLE:
 				CommandPrintf(ptrUart, "controller Simple-Position-PID(2)");
 				return 0;
-			case CTRL_POS_PID:
+			case feedbackCtrl::POS_PID:
 				CommandPrintf(ptrUart, "controller Current-Position-PID(3)");
 				return 0;
-			case CTRL_POS_VELOCITY_PID:
+			case feedbackCtrl::POS_VELOCITY_PID:
 				CommandPrintf(ptrUart, "controller Velocity-PID(4)");
 				return 0;
 			}
@@ -759,7 +772,7 @@ static int dirpin_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 
 	if (argc == 0)
 	{
-		if (RotationDir_t::CW_ROTATION == NVM->SystemParams.dirPinRotation)
+		if (RotationDir::CW == NVM->SystemParams.dirPinRotation)
 		{
 			CommandPrintf(ptrUart, "dirpin CW(%d)\n\r", (uint32_t)NVM->SystemParams.dirPinRotation);
 		}
@@ -777,17 +790,16 @@ static int dirpin_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 		x = abs(atol(argv[0]));
 		if (x <= 1)
 		{
-
 			SystemParams_t systemParams;
 
 			memcpy(&systemParams, &NVM->SystemParams, sizeof(systemParams));
 
-			systemParams.dirPinRotation = (RotationDir_t)x;
+			systemParams.dirPinRotation = (RotationDir)x;
 
 			nvmWriteSystemParms(systemParams);
 			stepperCtrl.updateParamsFromNVM();
 
-			if (RotationDir_t::CW_ROTATION == NVM->SystemParams.dirPinRotation)
+			if (RotationDir::CW == NVM->SystemParams.dirPinRotation)
 			{
 				CommandPrintf(ptrUart, "dirpin CW(%d)\n\r", (uint32_t)NVM->SystemParams.dirPinRotation);
 			}
@@ -810,19 +822,19 @@ static int errorpinmode_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 
 	if (argc == 0)
 	{
-		if (ERROR_PIN_MODE_ACTIVE_HIGH == NVM->SystemParams.errorPinMode)
+		if (ErrorPinMode::ACTIVE_HIGH == NVM->SystemParams.errorPinMode)
 		{
 			CommandPrintf(ptrUart, "Error pin -  Enable Active High(%d)\n\r", (uint32_t)NVM->SystemParams.errorPinMode);
 		}
-		else if (ERROR_PIN_MODE_ACTIVE_LOW == NVM->SystemParams.errorPinMode)
+		else if (ErrorPinMode::ACTIVE_LOW == NVM->SystemParams.errorPinMode)
 		{
 			CommandPrintf(ptrUart, "Error pin -  Enable active low(%d)\n\r", (uint32_t)NVM->SystemParams.errorPinMode);
 		}
-		else if (ERROR_PIN_MODE_ERROR == NVM->SystemParams.errorPinMode)
+		else if (ErrorPinMode::ERROR == NVM->SystemParams.errorPinMode)
 		{
 			CommandPrintf(ptrUart, "Error pin -  Error pin(%d)\n\r", (uint32_t)NVM->SystemParams.errorPinMode);
 		}
-		else if (ERROR_PIN_MODE_BIDIR == NVM->SystemParams.errorPinMode)
+		else if (ErrorPinMode::BIDIR == NVM->SystemParams.errorPinMode)
 		{
 			CommandPrintf(ptrUart, "Error pin -  Bidi error(%d)\n\r", (uint32_t)NVM->SystemParams.errorPinMode);
 		}
@@ -842,24 +854,24 @@ static int errorpinmode_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 
 			memcpy(&systemParams, &NVM->SystemParams, sizeof(systemParams));
 
-			systemParams.errorPinMode = (ErrorPinMode_t)x;
+			systemParams.errorPinMode = (ErrorPinMode)x;
 
 			nvmWriteSystemParms(systemParams);
 			stepperCtrl.updateParamsFromNVM();
 
-			if (ERROR_PIN_MODE_ACTIVE_HIGH == NVM->SystemParams.errorPinMode)
+			if (ErrorPinMode::ACTIVE_HIGH == NVM->SystemParams.errorPinMode)
 			{
 				CommandPrintf(ptrUart, "Error pin -  Enable Active High(%d)\n\r", (uint32_t)NVM->SystemParams.errorPinMode);
 			}
-			else if (ERROR_PIN_MODE_ACTIVE_LOW == NVM->SystemParams.errorPinMode)
+			else if (ErrorPinMode::ACTIVE_LOW == NVM->SystemParams.errorPinMode)
 			{
 				CommandPrintf(ptrUart, "Error pin -  Enable active low(%d)\n\r", (uint32_t)NVM->SystemParams.errorPinMode);
 			}
-			else if (ERROR_PIN_MODE_ERROR == NVM->SystemParams.errorPinMode)
+			else if (ErrorPinMode::ERROR == NVM->SystemParams.errorPinMode)
 			{
 				CommandPrintf(ptrUart, "Error pin -  Error pin(%d)\n\r", (uint32_t)NVM->SystemParams.errorPinMode);
 			}
-			else if (ERROR_PIN_MODE_BIDIR == NVM->SystemParams.errorPinMode)
+			else if (ErrorPinMode::BIDIR == NVM->SystemParams.errorPinMode)
 			{
 				CommandPrintf(ptrUart, "Error pin -  Bidi error(%d)\n\r", (uint32_t)NVM->SystemParams.errorPinMode);
 			}
@@ -879,15 +891,15 @@ static int enablepinmode_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 
 	if (argc == 0)
 	{
-		if (ENABLE_PIN_MODE_ACTIVE_HIGH == NVM->SystemParams.enablePinMode)
+		if (EnablePinMode::ACTIVE_HIGH == NVM->SystemParams.enablePinMode)
 		{
 			CommandPrintf(ptrUart, "Enable pin -  Enable Active High(%d)\n\r", (uint32_t)NVM->SystemParams.enablePinMode);
 		}
-		else if (ENABLE_PIN_MODE_ACTIVE_LOW == NVM->SystemParams.enablePinMode)
+		else if (EnablePinMode::ACTIVE_LOW == NVM->SystemParams.enablePinMode)
 		{
 			CommandPrintf(ptrUart, "Enable pin -  Enable active low(%d)\n\r", (uint32_t)NVM->SystemParams.enablePinMode);
 		}
-		else if (ENABLE_PIN_MODE_ALWAYS == NVM->SystemParams.enablePinMode)
+		else if (EnablePinMode::ALWAYS_ON == NVM->SystemParams.enablePinMode)
 		{
 			CommandPrintf(ptrUart, "Enable pin - always on");
 		}
@@ -909,19 +921,19 @@ static int enablepinmode_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 		if (x <= 1)
 		{
 			memcpy(&systemParams, &NVM->SystemParams, sizeof(systemParams));		//get current params
-			systemParams.enablePinMode = (EnablePinMode_t)x;						//change just enablepinmode
+			systemParams.enablePinMode = (EnablePinMode)x;						//change just enablepinmode
 			nvmWriteSystemParms(systemParams);										//write out to nvram
 			stepperCtrl.updateParamsFromNVM();
 
-			if (ENABLE_PIN_MODE_ACTIVE_HIGH == NVM->SystemParams.enablePinMode)
+			if (EnablePinMode::ACTIVE_HIGH == NVM->SystemParams.enablePinMode)
 			{
 				CommandPrintf(ptrUart, "Enable pin -  Enable Active High(%d)\n\r", (uint32_t)NVM->SystemParams.enablePinMode);
 			}
-			else if (ENABLE_PIN_MODE_ACTIVE_LOW == NVM->SystemParams.enablePinMode)
+			else if (EnablePinMode::ACTIVE_LOW == NVM->SystemParams.enablePinMode)
 			{
 				CommandPrintf(ptrUart, "Enable pin -  Enable active low(%d)\n\r", (uint32_t)NVM->SystemParams.enablePinMode);
 			}
-			else if (ENABLE_PIN_MODE_ALWAYS == NVM->SystemParams.enablePinMode)
+			else if (EnablePinMode::ALWAYS_ON == NVM->SystemParams.enablePinMode)
 			{
 				CommandPrintf(ptrUart, "Enable pin -  Bidi error(%d)\n\r", (uint32_t)NVM->SystemParams.enablePinMode);
 			}

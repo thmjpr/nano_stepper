@@ -35,6 +35,7 @@ void flashWaitForReady(void);
 static inline int32_t flashRead(const volatile void *flash_ptr, void *data, uint32_t size)
 {
   memcpy(data, (const void *)flash_ptr, size);
+  return 0;
 }
 
 

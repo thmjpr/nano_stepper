@@ -20,6 +20,7 @@
 #include "nzs_lcd.h"
 #include "stepper_controller.h"
 #include "planner.h"
+#include "adc_analog.h"
 
 typedef struct
 {
@@ -29,7 +30,7 @@ typedef struct
 }eepromData_t;
 
 class NZS //nano Zero Stepper
-{
+{	
 	public:
 		void begin(void);
 		void loop(void);

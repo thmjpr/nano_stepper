@@ -29,8 +29,6 @@
 #define LCD_WIDTH	128
 #define LCD_HEIGHT	64
 
-#define skip_when_no_display() if(displayEnabled == false){return;}
-
 #define NAME_LEN 		15		//Max function name
 #define LCD_MAX_CHAR	11		//Max characters on LCD line
 
@@ -51,7 +49,7 @@ typedef struct {
 class LCD
 {
 	private:
-		bool displayEnabled;
+		bool displayEnabled;			//Is display active/responding
 		Adafruit_SSD1306 display;
 		StepperCtrl *ptrStepperCtrl;
 		menuItem_t *ptrMenu;

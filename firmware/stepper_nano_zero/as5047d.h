@@ -17,7 +17,7 @@
 
 class AS5047D {
 private:
-	int chipSelectPin;
+	int chipSelectPin = -1;
 	int16_t readAddress(uint16_t addr);
 	bool error = false;
 	bool as5047d = true;

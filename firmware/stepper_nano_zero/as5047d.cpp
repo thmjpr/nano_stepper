@@ -76,7 +76,7 @@ boolean AS5047D::begin(int csPin)
 	pinMode(PIN_MISO, INPUT);
 
 	error = false;
-	SPISettings settingsA(5000000, MSBFIRST, SPI_MODE1); ///400000, MSBFIRST, SPI_MODE1);
+	SPISettings settingsA(10000000, MSBFIRST, SPI_MODE1); ///400000, MSBFIRST, SPI_MODE1);	//***FFF test 10MHz*/
 	chipSelectPin = csPin;
 
 	LOG("csPin is %d", csPin);
@@ -195,15 +195,17 @@ int16_t AS5047D::readEncoderAngle(void)
 //pipelined read of the encoder angle used for high speed reads, but value is always one read behind
 int16_t AS5047D::readEncoderAnglePipeLineRead(void)
 {
-	int16_t data;
+	volatile int16_t data;
 	int t0 = 10;
-	GPIO_LOW(chipSelectPin); //(chipSelectPin, LOW);
-	//delayMicroseconds(1);
+	
+	GPIO_LOW(chipSelectPin);
+	
+	delayMicroseconds(1);	//??
+
 	do
 	{
-
 		// doing two 8 bit transfers is faster than one 16 bit
-		data = (uint16_t)SPI.transfer(0xFF) << 8 | ((uint16_t)SPI.transfer(0xFF) & 0x0FF);
+		data = ((uint16_t)SPI.transfer(0xFF) << 8) | ((uint16_t)SPI.transfer(0xFF) & 0x0FF);
 		t0--;
 		if (t0 <= 0)
 		{
@@ -215,7 +217,8 @@ int16_t AS5047D::readEncoderAnglePipeLineRead(void)
 
 	data = data & 0x3FFF; //mask off the error and parity bits
 	GPIO_HIGH(chipSelectPin);
-	//digitalWrite(chipSelectPin, HIGH);
+
+	
 	//TODO we really should check for errors and return a negative result or something
 	return data;
 }

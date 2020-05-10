@@ -19,6 +19,8 @@
 #include <Wire.h>
 
 #ifndef DISABLE_LCD
+#define skip_when_no_display() if(displayEnabled == false){return;}
+
 void LCD::begin(StepperCtrl *ptrsCtrl)
 {
 #ifndef MECHADUINO_HARDWARE
@@ -56,7 +58,8 @@ void LCD::begin(StepperCtrl *ptrsCtrl)
 	if (displayEnabled)
 	{
 		displayEnabled = display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
-	}else
+	}
+	else
 	{
 		WARNING("SCL/SDA not pulled up");
 	}
@@ -208,24 +211,24 @@ void __attribute__ ((optimize("Ofast"))) LCD::updateMenu(void)
 
 		if (ptrMenu[menuIndex].func != NULL)
 		{
-			LOG("Calling function for %s",ptrMenu[menuIndex].str);
+			LOG("Calling function for %s", ptrMenu[menuIndex].str);
 			if (ptrOptions != NULL)
 			{
 				char *ptrArgV[1];
 				char str[25] = {0};
 				ptrArgV[0] = str;
 				sprintf(str,"%d",optionIndex);
-				LOG("Calling function for %s %s",ptrMenu[menuIndex].str,str);
+				LOG("Calling function for %s %s", ptrMenu[menuIndex].str, str);
 				ptrMenu[menuIndex].func(1,ptrArgV);
 				ptrOptions = NULL;
 				optionIndex = 0;
 			}else
 			{
 				int i;
-				i = ptrMenu[menuIndex].func(0,NULL);
+				i = ptrMenu[menuIndex].func(0, NULL);
 				if (ptrMenu[menuIndex].ptrOptions != NULL)
 				{
-					LOG("displaying options for %s %d",ptrMenu[menuIndex].str,i);
+					LOG("displaying options for %s %d", ptrMenu[menuIndex].str, i);
 					ptrOptions = ptrMenu[menuIndex].ptrOptions;
 					optionIndex = i;
 				}
@@ -298,7 +301,6 @@ void __attribute__((optimize("Ofast")))LCD::process(void)
 		buttonState &= ~0x04;
 	}
 }
-#endif
 
 void LCD::updateLCD(void)
 {
@@ -363,26 +365,26 @@ void LCD::updateLCD(void)
 			//LOG("RPMs is %d, %d, %d",(int32_t)x,(int32_t)d,(int32_t)y);
 			switch (ptrStepperCtrl->getControlMode())
 			{
-			case CTRL_SIMPLE:
+			case feedbackCtrl::SIMPLE:
 				sprintf(str[0], "%03d RPM simp", RPM);
 				break;
 
-			case CTRL_POS_PID:
+			case feedbackCtrl::POS_PID:
 				sprintf(str[0], "%03d RPM pPID", RPM);
 				break;
 
-			case CTRL_POS_VELOCITY_PID:
+			case feedbackCtrl::POS_VELOCITY_PID:
 				sprintf(str[0], "%03d RPM vPID", RPM);
 				break;
 
-			case CTRL_OPEN:
+			case feedbackCtrl::OPEN:
 				sprintf(str[0], "%03d RPM open", RPM);
 				break;
-			case CTRL_OFF:
+			case feedbackCtrl::OFF:
 				sprintf(str[0], "%03d RPM off", RPM);
 				break;
 			default:
-				sprintf(str[0], "error %u", ptrStepperCtrl->getControlMode());
+				sprintf(str[0], "error %u", (uint32_t)ptrStepperCtrl->getControlMode());
 				break;
 			}
 
@@ -525,3 +527,18 @@ const uint8_t LCD::icon_splash_screen[] = {
 	0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
 	0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0
 };
+
+#else		//LCD display disabled
+void LCD::updateLCD(void){return;}
+void LCD::showMenu(void){return;}
+void LCD::updateMenu(void){return;}
+void LCD::showOptions(void){return;}
+void LCD::forceMenuActive(void){return;}
+void LCD::setMenu(menuItem_t *pMenu){return;}
+void LCD::begin(StepperCtrl *ptrStepperCtrl){return;} 	//sets up the LCD
+void LCD::process(void){return;} 							//processes the LCD and updates as needed
+void LCD::showSplash(void){return;}
+void LCD::lcdShow(const char *line1, const char *line2, const char *line3){return;}
+void LCD::showCalibration(int current_step){return;}
+
+#endif

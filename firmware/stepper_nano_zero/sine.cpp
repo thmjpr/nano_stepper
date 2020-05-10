@@ -19,7 +19,7 @@
 #pragma GCC optimize ("-Ofast")
 
 #ifdef NZS_FAST_SINE
-static const int16_t sineTable[1280]={
+static const int16_t sineTable[SINE_TABLE_SIZE] =  {
 0,201,402,603,804,1005,1206,1407,1608,1808,2009,2210,2410,2611,2811,3011,
 3212,3412,3611,3811,4011,4210,4410,4609,4808,5007,5205,5404,5602,5800,5998,6195,
 6392,6589,6786,6983,7179,7375,7571,7766,7962,8156,8351,8545,8739,8933,9126,9319,
@@ -131,23 +131,23 @@ int16_t sine(uint16_t angle)
 #ifdef NZS_FAST_SINE
 	return sineTable[angle];
 #else
-	int sign=1;
+	int sign = 1;
 	int16_t ret;
+
 	//our sine table has 1024 points per rotation so convert angle to closest step
-
-	if (angle>=(SINE_STEPS/2))
+	if (angle >= (SINE_STEPS/2))
 	{
-		sign=-1;
+		sign = -1;
 	}
 
-	angle=angle % (SINE_STEPS/2); //limit to 0-180 as sign takes care of 180-360
+	angle = angle % (SINE_STEPS/2); //limit to 0-180 as sign takes care of 180-360
 
-	if (angle>(SINE_STEPS/4-1))  //if we are greater than 90 we need to look up table backwards
+	if (angle > (SINE_STEPS/4 - 1))  //if we are greater than 90 we need to look up table backwards
 	{
-		angle=(SINE_STEPS/2)-angle;
+		angle = (SINE_STEPS/2) - angle;
 	}
 
-	ret=(int16_t)(sineTable[angle]/2)*sign;
+	ret = (int16_t)(sineTable[angle]/2)*sign;
 	return ret;
 #endif
 }
@@ -155,30 +155,30 @@ int16_t sine(uint16_t angle)
 int16_t cosine(uint16_t angle)
 {
 #ifdef NZS_FAST_SINE
-	angle=angle+(SINE_STEPS/4);
+	angle += (SINE_STEPS/4);
 	return sineTable[angle];
 #else
 
-	int sign=1;
+	int sign = 1;
 	int16_t ret;
 	//our sine table has 1024 points per rotation so convert angle to closest step
 
-	if (angle>=(SINE_STEPS/4) and angle<(3*(SINE_STEPS/4)))
+	if (angle >= (SINE_STEPS/4) and angle < (3*(SINE_STEPS/4)))
 	{
-		sign=-1;
+		sign = -1;
 	}
 
-	angle=angle % (SINE_STEPS/2); //limit to 0-180 as sign takes care of 180-360
+	angle = angle % (SINE_STEPS/2); //limit to 0-180 as sign takes care of 180-360
 
-	if (angle>(SINE_STEPS/4-1))  //if we are greater than 90 we need to look up table backwards
+	if (angle > (SINE_STEPS/4 - 1))  //if we are greater than 90 we need to look up table backwards
 	{
-		angle=(SINE_STEPS/2)-angle;
+		angle = (SINE_STEPS/2) - angle;
 	}
 
 	//for cosine we need 90 degree phase shift
-	angle=(SINE_STEPS/4)-angle;
+	angle = (SINE_STEPS/4) - angle;
 
-	ret=(int16_t)(sineTable[angle]/2)*sign;
+	ret = (int16_t)(sineTable[angle]/2)*sign;
 	return ret;
 #endif
 }

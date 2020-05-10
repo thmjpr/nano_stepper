@@ -19,7 +19,7 @@ void checkDir()
 	int dir = 1;
 	static int lastDir = -1;
 	
-	if (RotationDir_t::CW_ROTATION == NVM->SystemParams.dirPinRotation)
+	if (RotationDir::CW == NVM->SystemParams.dirPinRotation)
 	{
 		dir = 0; 		//reverse the direction
 	}
@@ -50,7 +50,7 @@ int64_t getSteps(void)
 	uint16_t y;
 	static uint16_t lasty = 0;
 
-	TCC2->CTRLBSET.reg = TCC_CTRLBSET_CMD_READSYNC;
+	TCC2->CTRLBSET.reg = TCC_CTRLBSET_CMD_READSYNC;		//synchronize timer register
 	WAIT_TCC2_SYNC();
 
 	y = (uint16_t)(TCC2->COUNT.reg & 0x0FFFFul);  //use only lowest 16bits
@@ -68,6 +68,7 @@ int64_t getSteps(void)
 	return x;
 #endif
 }
+
 //this function is called on the rising edge of a step from external device
 static void stepInput(void)
 {
@@ -76,7 +77,7 @@ static void stepInput(void)
 	//read our direction pin
 	dir = digitalRead(PIN_DIR_INPUT);
 
-	if (RotationDir_t::CW_ROTATION == NVM->SystemParams.dirPinRotation)
+	if (RotationDir::CW == NVM->SystemParams.dirPinRotation)
 	{
 		dir = !dir; //reverse the rotation
 	}
@@ -164,35 +165,35 @@ void setupStepEvent(void)
 	
 	
 	//Setup the timer counter
-	PM->APBCMASK.reg |= PM_APBCMASK_TCC2;
-	// Enable GCLK for TCC2 (timer counter input clock)
-	GCLK->CLKCTRL.reg = (uint16_t)(GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN_GCLK0 | GCLK_CLKCTRL_ID(GCM_TCC2_TC3));
+	PM->APBCMASK.reg |= PM_APBCMASK_TCC2;		//Enable TCC2 clock
+	GCLK->CLKCTRL.reg = (uint16_t)(GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN_GCLK0 | GCLK_CLKCTRL_ID(GCM_TCC2_TC3)); // Enable GCLK for TCC2 (timer counter input clock)
 	while (GCLK->STATUS.bit.SYNCBUSY)
 		;
 
-	TCC2->CTRLA.reg &= ~TCC_CTRLA_ENABLE;
+	TCC2->CTRLA.reg &= ~TCC_CTRLA_ENABLE;	//Disable TCC2
 	WAIT_TCC2_SYNC();
 
-	TCC2->CTRLA.reg = TCC_CTRLA_SWRST;   //reset TCC2
-	WAIT_TCC2_SYNC();
-	while (TCC2->CTRLA.bit.SWRST == 1) ;
+	TCC2->CTRLA.reg = TCC_CTRLA_SWRST;		//Reset TCC2
+	WAIT_TCC2_SYNC();						//
+	while (TCC2->CTRLA.bit.SWRST == 1) ;	//wait for reset to complete
 
-	//TCC2->WAVE.reg = TCC_WAVE_WAVEGEN_NFRQ;
+	//TCC2->WAVE.reg = TCC_WAVE_WAVEGEN_NFRQ;	//wavegen: normal frequency, max PER (8bit), max (16-32bit)
 	//WAIT_TCC2_SYNC();
 
-	TCC2->EVCTRL.reg = TCC_EVCTRL_EVACT0_COUNTEV | TCC_EVCTRL_TCEI0
-			| TCC_EVCTRL_EVACT1_DIR | TCC_EVCTRL_TCEI1;
+	TCC2->EVCTRL.reg =	TCC_EVCTRL_EVACT0_COUNTEV |		//event0: count
+						TCC_EVCTRL_TCEI0	|			//enable incoming event 0
+						TCC_EVCTRL_EVACT1_DIR |			//event1: direction control?
+						TCC_EVCTRL_TCEI1;				//enable incoming event 1
 	WAIT_TCC2_SYNC();
 	
-	TCC2->COUNT.reg = 0;
+	TCC2->COUNT.reg = 0;			//reset count to 0
 	WAIT_TCC2_SYNC();
 	
-	TCC2->CTRLBSET.bit.DIR = 1;
-
+	TCC2->CTRLBSET.bit.DIR = 1;		//counter direction -> down		**FF??
 	WAIT_TCC2_SYNC();
-	TCC2->CTRLA.reg |= TCC_CTRLA_ENABLE;
+	
+	TCC2->CTRLA.reg |= TCC_CTRLA_ENABLE;	//Enable TCC2 peripheral
 	WAIT_TCC2_SYNC();
-
 }
 
 /*

@@ -9,8 +9,8 @@
  *	BSD license, check license.txt for more information
  *	All text above, must be included in any redistribution
  *********************************************************************/
-//#ifdef A4954_DRIVER
 
+//#ifdef A4954_DRIVER
 #include "A4954.h"
 #include "wiring_private.h"
 #include "syslog.h"
@@ -280,12 +280,13 @@ int32_t A4954::move(int32_t stepAngle, uint32_t mA)
 	//WARNING("move %d %d",stepAngle,mA);
 
 	//handle roll overs
-	stepAngle %= SINE_STEPS;
-
-	//figure out our sine Angle
-	// note our SINE_STEPS is 4x of microsteps for a reason
-	//angle=(stepAngle+(SINE_STEPS/8)) % SINE_STEPS;
-	angle = (stepAngle);
+	//stepAngle = stepAngle % SINE_STEPS;
+	stepAngle = abs(stepAngle % SINE_STEPS);
+	
+	angle = stepAngle;
+	
+	if (angle > SINE_TABLE_SIZE)
+		ERROR("angle (%d) exceeds table", angle);
 
 	//calculate the sine and cosine of our angle
 	sin = sine(angle);
@@ -338,6 +339,8 @@ int32_t A4954::move(int32_t stepAngle, uint32_t mA)
 	lastStepMicros = micros();
 	return stepAngle;
 }
+
+
 #pragma GCC pop_options
 
 //#endif

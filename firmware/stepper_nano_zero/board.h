@@ -5,7 +5,7 @@
  *	please support Misfit Tech and open-source hardware by purchasing
  *	products from Misfit Tech, www.misifittech.net!
  *
- *	Written by Trampas Stern  for Misfit Tech.
+ *	Written by Trampas Stern for Misfit Tech.
  *	BSD license, check license.txt for more information
  *	All text above, must be included in any redistribution
  *********************************************************************/
@@ -20,13 +20,14 @@
 //Board type used
 #define NZ_STEPPER_REV2
 //#define MECHADUINO_HARDWARE	//uncomment this if you are using the Mechaduino hardware
-//#define NEMA_23_10A_HW 	//uncomment the follow lines if using the NEMA 23 10A hardware
+//#define NEMA_23_10A_HW 		//uncomment the follow lines if using the NEMA 23 10A hardware
+#define DEBUG 1
 
 
-//
+//Optimizations
 #define NZS_FAST_CAL		// define this to use 32k of flash for fast calibration table
 #define NZS_FAST_SINE		//uses 2048 extra bytes to implement faster sine tables
-#define NZS_AS5047_PIPELINE	//does a pipeline read of encoder, which is slightly faster
+#define NZS_AS5047_PIPELINE	//does a pipeline read of encoder, which is slightly faster  //try no pipeline...?
 #define NZS_CONTROL_LOOP_HZ (6000) //update rate of control loop
 
 #define NZS_LCD_ABSOLUTE_ANGLE  //define this to show angle from zero in positive and negative direction
@@ -40,12 +41,12 @@
 
 //Define this to allow command out serial port, else hardware serial is debug log
 //#define CMD_SERIAL_PORT
-#define SERIAL_BAUD (115200) //baud rate for the serial ports
+#define SERIAL_BAUD (115200)	//baud rate for the serial ports		//jlink max = 128k
 
 //This section is for using the step and dir pins as serial port
 // when the enable pin is inactive.
 //#define USE_STEP_DIR_SERIAL
-#define STEP_DIR_BAUD (19200) //this is the baud rate we will use
+//#define STEP_DIR_BAUD (19200) //this is the baud rate we will use
 
 // These are used as an attempt to use TC4 to count steps
 //  currently this is not working.
@@ -58,6 +59,7 @@
 
 /* TODO are flaged with TODO
  *   TODO - add detection of magnet to make sure PCB is on motor
+ *   change BOD interrupt to ? use motor voltage dropping instead?
  */
 
 /* change log
@@ -112,7 +114,7 @@
  *	0.17 - Added the ability for the command line to go over the hardwired serial port
  *		 - Fixed a bug where step and direction pin were setup as pulled down pins
  *		    which could cause false stepping in nosiey environments
- * 	0.18 - Added support for EEPROM writting of last location during brown out - currently brown out is too fast to write
+ * 	0.18 - Added support for EEPROM writing of last location during brown out - currently brown out is too fast to write
  * 	     - Added commands to support reading and restoring location from eeprom
  * 	     - Check for pull up on SDA/SCL before doing a I2C read as that SERCOM driver has not time outs and locks.
  * 	     - Added faster detection of USB not being plugged in, reduces power up time with no USB
@@ -147,37 +149,33 @@
 /*
  *  Typedefs that are used across multiple files/modules
  */
-/*
-typedef enum {
-	CW_ROTATION = 0,
-	CCW_ROTATION = 1,
-} RotationDir_t;*/
 
-enum class RotationDir_t{
-	CW_ROTATION = 0,
-	CCW_ROTATION = 1,
+enum class RotationDir {
+	CW = 0,					//Clockwise
+	CCW = 1,				//
 };
 
-typedef enum {
-	ERROR_PIN_MODE_ACTIVE_HIGH = 0, 		//error pin 
-	ERROR_PIN_MODE_ACTIVE_LOW = 1,			//error pin 
-	ERROR_PIN_MODE_ERROR = 2,				//error pin is low when there is angle error //***FF
-	ERROR_PIN_MODE_BIDIR = 3,				//error pin is bidirection open collector
-} ErrorPinMode_t;
+enum class ErrorPinMode {
+	ACTIVE_HIGH = 0, 		//
+	ACTIVE_LOW = 1,			//
+	ERROR = 2,				//
+	BIDIR = 3,				//error pin is bidirection open collector
+};
 
-typedef enum {
-	ENABLE_PIN_MODE_ACTIVE_HIGH = 0, 			//enable pin active high
-	ENABLE_PIN_MODE_ACTIVE_LOW = 1,				//enable pin active low 
-	ENABLE_PIN_MODE_ALWAYS = 2,					//always enabled
-} EnablePinMode_t;
+enum class EnablePinMode {
+	ACTIVE_HIGH = 0, 		//enable pin active high
+	ACTIVE_LOW = 1,			//enable pin active low 
+	ALWAYS_ON = 2,			//always enabled
+	BIDIR = 3,				//??
+};
 
-typedef enum {
-	CTRL_OFF = 0, 	 						//controller is disabled
-	CTRL_OPEN = 1, 	 						//controller is in open loop mode
-	CTRL_SIMPLE = 2, 						//simple error controller
-	CTRL_POS_PID = 3, 						//PID  Position controller
-	CTRL_POS_VELOCITY_PID = 4, 				//PID  Velocity controller
-} feedbackCtrl_t;
+enum class feedbackCtrl {
+	OFF = 0, 	 				//controller is disabled
+	OPEN = 1, 	 				//controller is in open loop mode
+	SIMPLE = 2, 				//simple error controller
+	POS_PID = 3, 				//PID Position controller
+	POS_VELOCITY_PID = 4, 		//PID Velocity controller
+};
 
 // ******** EVENT SYS USAGAE ************
 // Channel 0 - Step pin event
@@ -243,7 +241,7 @@ typedef enum {
 	#define PIN_A5995_SLEEPn	(25) //RXLED
 	#define A5995_DRIVER
 
-#elif defined NZ_STEPPER_REV1 //NZstepper hardware https://github.com/thmjpr/nano_stepper/tree/master/hardware
+#elif defined NZ_STEPPER_REV1	 //NZstepper hardware https://github.com/thmjpr/nano_stepper/tree/master/hardware
 	#define PIN_SW1 (19)		  //analogInputToDigitalPin(PIN_A5))
 	#define PIN_SW3 (14)		  //analogInputToDigitalPin(PIN_A0))
 	#define PIN_SW2 (15)		  //analogInputToDigitalPin(PIN_A1))
@@ -254,17 +252,17 @@ typedef enum {
 	#define PIN_AS5047D_PWR	(11) //pull low to power on AS5047D
 	#define A4954_DRIVER
 
-#elif defined NZ_STEPPER_REV2 //REV2 hardware
+#elif defined NZ_STEPPER_REV2	  //REV2 hardware
 	#define PIN_SW1 (19)		  //A5 = PB02 = 19
 	#define PIN_SW3 (14)		  //A0 = PA02 = 14
 	#define PIN_SW2 (15)		  //A1 = PB08 = 15
-	#define PIN_TEMPERATURE (2)	  //D2 = PA14 - NTC temperature near motor driver
+	#define PIN_TEMPERATURE (2)   //D2 = PA14 - NTC temperature near motor driver		//change to PB03 -> AIN[11]??
 	#define PIN_ERROR (3)		  //D3 = PA09
 	#define PIN_ENABLE (10)		  //D10 = PA18
-	#define PIN_VMOTOR (17)	      //A3 = PA04 = 17 - 10k/1k voltage divider from input voltage
+	#define PIN_VMOTOR (17)	      //A3 = PA04 = 17 - 10k/1k voltage divider from input voltage		//PA04 -> AIN[4]
 	#define PIN_AS5047D_PWR	(11)  //pull low to power on AS5047D
-	#define AS5047D_ENCODER	1
-	#define A4954_DRIVER	1		//
+	#define AS5047D_ENCODER	1		//Encoder type (P is same?)
+	#define A4954_DRIVER	1		//Driver type
 
 #elif defined NZ_STEPPER_5995		//
 	#define PIN_SW1 (19)
@@ -286,23 +284,28 @@ typedef enum {
 	#error "model not found"
 #endif
 
+#define UPDATE_EEPROM false		//keep eeprom up to date
+
 #ifdef USE_STEP_DIR_SERIAL
 	#error "Step/Dir UART not supported on Mechaduino yet"
 #endif
 
-#define PIN_SCL (21)
-#define PIN_SDA (20)
+#define PIN_SCL (21)			//I2C SCL (LCD)
+#define PIN_SDA (20)			//I2C SDA (LCD)
 #define PIN_USB_PWR (38)		//this pin is high when usb is connected
-#define PIN_AS5047D_CS  (16)	//
 
-//These pins use the TIMER in the A4954 driver
-//changing the pin definitions here may require changes in the A4954.cpp file
+#define PIN_AS5047D_CS  (16)	//
+//AS5047 MOSI		
+//AS5047 MISO		
+
+//FET
+#ifdef FET_STUFF
 #define PIN_FET_IN1		(5) //PA15 TC3/WO[1] TCC0/WO[5]1
 #define PIN_FET_IN2		(6) //PA20 TC7/W0[0] TCC0/WO[6]2
 #define PIN_FET_IN3		(7) //PA21 TC7/WO[1] TCC0/WO[7]3
 #define PIN_FET_IN4		(2) //PA14 TC3/W0[0] TCC0/WO[4] 0
 #define PIN_FET_VREF1	(4) //PA08
-//#define PIN_FET_VREF2	(3) //PA09
+#define PIN_FET_VREF2	(3) //PA09
 #define PIN_FET_ENABLE	(12) //
 
 //current sense pin from each H-bridge
@@ -310,8 +313,9 @@ typedef enum {
 #define ISENSE_FET_B	 (8)  //PA06
 
 //Comparators analog inputs
-//#define COMP_FET_A		 (18) 	//PA05
-//#define COMP_FET_B		 (9)	//PA07
+#define COMP_FET_A		 (18) 	//PA05
+#define COMP_FET_B		 (9)	//PA07
+#endif
 
 #define PIN_GREEN_LED  		(8)		//PA06
 #define PIN_RED_LED		    (13)	//PA17
@@ -342,10 +346,14 @@ typedef enum {
 #define SIGN(x)  (((x) > 0) - ((x) < 0))
 #define NVIC_IS_IRQ_ENABLED(x) (NVIC->ISER[0] & (1 << ((uint32_t)(x) & 0x1F)))!=0
 
+#include "wiring_private.h"
 
 //sets up the pins for the board
 static void boardSetupPins(void)
 {
+//USB power detection
+	pinMode(PIN_USB_PWR, INPUT);
+	
 //setup switch pins
 #ifdef PIN_SW1
 	pinMode(PIN_SW1, INPUT_PULLUP);
@@ -356,6 +364,12 @@ static void boardSetupPins(void)
 #if defined(NZ_STEPPER_REV1) || defined(NZ_STEPPER_REV2) || defined(NZ_STEPPER_5995)
 	pinMode(PIN_STEP_INPUT, INPUT_PULLDOWN);
 	pinMode(PIN_DIR_INPUT, INPUT_PULLDOWN);
+	
+	pinMode(PIN_TEMPERATURE, INPUT);	//PIN_TEMPERATURE	//something pulling PA14 high? pin no longer used
+	pinMode(PIN_VMOTOR, INPUT); 		//PIN_VMOTOR
+	
+	//pinPeripheral(PIN_TEMPERATURE, PIO_ANALOG);
+	//pinPeripheral(PIN_VMOTOR, PIO_ANALOG);
 #else
 	pinMode(PIN_STEP_INPUT, INPUT);
 	pinMode(PIN_DIR_INPUT, INPUT);
@@ -364,8 +378,11 @@ static void boardSetupPins(void)
 #ifdef PIN_ENABLE
 	pinMode(PIN_ENABLE, INPUT_PULLUP); //default error pin as enable pin with pull up
 #endif
-
+#ifdef PIN_ERROR
 	pinMode(PIN_ERROR, INPUT_PULLUP); //default error pin as enable pin with pull up
+#endif
+	
+//AS5047
 	pinMode(PIN_AS5047D_CS, OUTPUT);
 	digitalWrite(PIN_AS5047D_CS, LOW); //pull CS LOW by default (chip powered off)
 
@@ -405,34 +422,6 @@ static void boardSetupPins(void)
 #endif
 }
 
-#if defined(NZ_STEPPER_REV1) || defined(NZ_STEPPER_REV2) || defined(NZ_STEPPER_5995) || defined(NEMA17_SMART_STEPPER_3_21_2017)
-static float GetMotorVoltage(void)
-{
-	uint32_t x;
-	float f;
-
-	x = analogRead(PIN_VMOTOR);						  //this should be a 10bit value mapped to 3.3V
-	f = (float)x * 3.3 / 1024.0 * ((10.0 + 1.0) / 1); //10k/1k resistor divider
-	return f;
-}
-
-
-//Read temperature near motor chip
-//not verified calculations
-//Can compare to on chip temperature, apparently needs calibration
-static int32_t getTemperature(void)
-{
-	float ntc;
-	ntc = analogRead(PIN_TEMPERATURE);
-	ntc = log(10000.0 * ((1024.0 / ntc - 1)));
-	//         =log(10000.0/(1024.0/RawADC-1)) // for pull-up configuration
-	ntc = 1 / (0.001129148 + (0.000234125 + (0.0000000876741 * ntc * ntc)) * ntc);
-	ntc = ntc - 273.15;			  // Convert Kelvin to Celcius
-
-	return (int32_t)ntc;
-}
-#endif
-
 static void inline GREEN_LED(bool state)
 {
 #ifdef PIN_GREEN_LED
@@ -445,10 +434,11 @@ static void inline RED_LED(bool state)
 	digitalWrite(PIN_RED_LED, state);
 }
 
-//Limit a signed integer to +/-limit number
+//Limit a signed integer to +/- limit number
 //positive number only for constraint
 static inline void constrain_pm(int32_t * number, int32_t constraint)
 {
+	//assert(constraint >= 0);
 	if (*number > constraint)
 		*number = constraint;
 	else if (*number < -constraint)
@@ -498,6 +488,7 @@ static inline void setPinCfg(uint16_t ulPin, uint8_t val)
 static inline void setPinMux(uint16_t ulPin, uint8_t val)
 {
 	uint8_t temp;
+	
 	temp = (PORT->Group[g_APinDescription[ulPin].ulPort].PMUX[g_APinDescription[ulPin].ulPin >> 1].reg);
 	if ((ulPin & 0x01) == 0)
 	{

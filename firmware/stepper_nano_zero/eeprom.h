@@ -27,6 +27,6 @@ typedef enum
 eepromError_t eepromInit(void);
 int eepromWriteCache(uint8_t *ptrData, uint32_t size); //returns number bytes written to cache
 eepromError_t eepromFlush(void);					   //flush the cache to flash memory
-int eepromRead(uint8_t *ptrData, uint32_t size);	   //returns number of bytes actually read, whcih could be less than size requested
+int eepromRead(uint8_t *ptrData, uint32_t size);	   //returns number of bytes actually read, which could be less than size requested
 
 #endif /* EEPROM_H_ */

@@ -20,8 +20,11 @@
 #include "board.h"
 
 #define SINE_STEPS (1024L)
-
 #define SINE_MAX ((int32_t)(32768L))
+#ifdef NZS_FAST_SINE
+#define SINE_TABLE_SIZE 1280
+#endif
+
 
 
 int16_t sine(uint16_t angle);

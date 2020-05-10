@@ -37,12 +37,12 @@
 
 #define N_DATA (1024)
 
-typedef enum {
-	STEPCTRL_NO_ERROR =		0,
-	STEPCTRL_NO_POWER =		1, //no power to motor
-	STEPCTRL_NO_CAL =		2, //calibration not set
-	STEPCTRL_NO_ENCODER =	3, //encoder not working
-} stepCtrlError_t;
+enum class stepCtrlError {
+	No_ERROR =		0,
+	No_POWER =		1, //no power to motor
+	No_CAL =		2, //calibration not set
+	No_ENCODER =	3, //encoder not working
+};
 
 //
 typedef struct {
@@ -162,11 +162,11 @@ class StepperCtrl
 		void moveToAbsAngle(int32_t a);
 		void moveToAngle(int32_t a, uint32_t ma);
 
-		stepCtrlError_t begin(void); //returns false if we can not use motor
+		stepCtrlError begin(void);			//returns false if we can not use motor
 
 		bool processFeedback(void); // does the feedback loop
 
-		feedbackCtrl_t getControlMode(void) { return systemParams.controllerMode;};
+		feedbackCtrl getControlMode(void) { return systemParams.controllerMode;};
 
 		void updateSteps(int64_t steps);
 		void requestStep(int dir, uint16_t steps); //requests a step, if feedback controller is off motor does not move

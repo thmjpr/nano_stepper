@@ -40,7 +40,7 @@
 class A4954
 {
 private:
-	uint32_t lastStepMicros; // time in microseconds that last step happened
+	uint32_t lastStepMicros = 0; // time in microseconds that last step happened
 	bool forwardRotation = true;
 	volatile bool enabled = true;
 

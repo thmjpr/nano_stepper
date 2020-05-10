@@ -21,48 +21,58 @@
 #include "eeprom.h"
 #include "steppin.h"
 //#include "wiring_private.h"
+//#include "adc_analog.h"
 
 #pragma GCC push_options
 #pragma GCC optimize ("-Ofast")
+
+#define skip_when_no_display() if(!Lcd.displayEn()){return 0;}
 
 //TODO:
 //can show direction/step/error/enable pin status on LCD, maybe just enable?
 
 eepromData_t PowerupEEPROM = { 0 };
 volatile bool enableState = true;
-int32_t dataEnabled = 0;
-StepperCtrl stepperCtrl;
-LCD Lcd;
+int32_t dataEnabled = 0;	//print out
+StepperCtrl stepperCtrl;	//
+LCD Lcd;					//
+ADC_Peripheral adc;			//
 
 int menuInfo(int argc, char *argv[])
 {
-	if(!Lcd.displayEn()){return 0;}
+	skip_when_no_display();
 
-	int temp, volt;
+	float temp, volt;
 	char str[3][20];
+	
+	adc.begin();
+	temp = adc.getTemperature();
+	volt = adc.GetMotorVoltage();
 
-	temp = getTemperature();
-	volt = GetMotorVoltage();
-
-	//Maybe show the values for 2s then go back?
-
-	sprintf(str[0], "v = %03d", volt);
-	sprintf(str[1], "t = %03d", temp);
+	sprintf(str[0], "v = %0.1f", volt);
+	sprintf(str[1], "t = %0.1fC", temp);
 	sprintf(str[2], "x = ");
 
 	str[0][10] = '\0';
 	str[1][10] = '\0';
 	str[2][10] = '\0';
 	Lcd.lcdShow(str[0], str[1], str[2]);
+	
+	//show the values for 2s then go back?
+	delay(1000);
+	return 0;
 }
 
 int menuCalibrate(int argc, char *argv[])
 {
+	skip_when_no_display();
 	stepperCtrl.calibrateEncoder(&Lcd);
 }
 
 int menuTestCal(int argc, char *argv[])
 {
+	skip_when_no_display();
+	
 	Angle error;
 	int32_t x, y;
 	char str[25];
@@ -74,12 +84,11 @@ int menuTestCal(int argc, char *argv[])
 	x = x - (y * 100);
 	x = abs(x);
 	sprintf(str, "%d.%02d deg", y, (int)x);
-	
-#ifndef DISABLE_LCD
+
 	Lcd.lcdShow("Cal Error", str, "");
-#endif
 
 	LOG("Calibration error %s", str);
+	
 #ifndef MECHADUINO_HARDWARE
 	while (digitalRead(PIN_SW3) == 1)
 	{
@@ -90,6 +99,7 @@ int menuTestCal(int argc, char *argv[])
 		//wait for button release
 	}
 #endif
+	return 0;
 }
 
 //Number of steps per revolution
@@ -259,18 +269,17 @@ int controlLoop(int argc, char *argv[])
 {
 	if (argc == 1)
 	{
-		int i;
-		i = atol(argv[0]);
+		feedbackCtrl i = (feedbackCtrl)atol(argv[0]);
 		SystemParams_t params;
 		memcpy((void *)&params, (void *)&NVM->SystemParams, sizeof(params));
 		if (i != params.controllerMode)
 		{
-			params.controllerMode = (feedbackCtrl_t)i;
+			params.controllerMode = i;
 			nvmWriteSystemParms(params);
 		}
-		return i;
+		return (int)i;
 	}
-	return NVM->SystemParams.controllerMode;
+	return (int)NVM->SystemParams.controllerMode;
 }
 
 #ifdef PIN_ERROR
@@ -284,18 +293,17 @@ int errorPin(int argc, char *argv[])
 {
 	if (argc == 1)
 	{
-		int i;
-		i = atol(argv[0]);
+		ErrorPinMode i = (ErrorPinMode)atol(argv[0]);
 		SystemParams_t params;
 		memcpy((void *)&params, (void *)&NVM->SystemParams, sizeof(params));
 		if (i != params.errorPinMode)
 		{
-			params.errorPinMode = (ErrorPinMode_t)i;
+			params.errorPinMode = i;
 			nvmWriteSystemParms(params);
 		}
-		return i;
+		return (int)i;
 	}
-	return NVM->SystemParams.errorPinMode;
+	return (int)NVM->SystemParams.errorPinMode;
 }
 #endif
 
@@ -303,7 +311,7 @@ int errorPin(int argc, char *argv[])
 static  options_t enablePinOptions[]{
 		{"Enable"},			//Active high
 		{"!Enable"},		//Active low
-		{"Always enabled"},
+		{"Ignore"},			//Always enabled
 		{""}
 };
 
@@ -311,18 +319,17 @@ int enablePin(int argc, char *argv[])
 {
 	if (argc == 1)
 	{
-		int i;
-		i = atol(argv[0]);
+		EnablePinMode i = (EnablePinMode) atol(argv[0]);
 		SystemParams_t params;
 		memcpy((void *)&params, (void *)&NVM->SystemParams, sizeof(params));
 		if (i != params.enablePinMode)
 		{
-			params.enablePinMode = (EnablePinMode_t)i;
+			params.enablePinMode = i;
 			nvmWriteSystemParms(params);
 		}
-		return i;
+		return (int)i;
 	}
-	return NVM->SystemParams.enablePinMode;
+	return (int)NVM->SystemParams.enablePinMode;
 }
 #endif
 
@@ -340,18 +347,18 @@ int dirPin(int argc, char *argv[])
 		i = atol(argv[0]);
 		SystemParams_t params;
 		memcpy((void *)&params, (void *)&NVM->SystemParams, sizeof(params));
-		if ((RotationDir_t)i != params.dirPinRotation)
+		if ((RotationDir)i != params.dirPinRotation)
 		{
-			params.dirPinRotation = (RotationDir_t)i;
+			params.dirPinRotation = (RotationDir)i;
 			nvmWriteSystemParms(params);
 		}
-		return i;
+		return (int)i;
 	}
 	return (int)NVM->SystemParams.dirPinRotation;
 }
 
 static  menuItem_t MenuMain[]{
-		{"Information", menuInfo, NULL},
+		{"Info", menuInfo, NULL},
 		{"Calibrate", menuCalibrate, NULL},
 		{"Test Cal", menuTestCal, NULL},
 		//		{"Mtr steps", motorSteps,stepOptions}, NOT GOOD for user to call this
@@ -360,7 +367,7 @@ static  menuItem_t MenuMain[]{
 		{"Microstep", microsteps, microstepOptions},
 		{"Ctlr Mode", controlLoop, controlLoopOptions}, 	//this may not be good for user to call
 #ifdef PIN_ENABLE
-		{"EnablePin", enablePin, errorPinOptions},
+		{"EnablePin", enablePin, enablePinOptions},
 #endif
 #ifdef PIN_ERROR
 		{"Error Pin", errorPin, errorPinOptions},			//Need to test
@@ -392,18 +399,20 @@ static void enableInput(void)
 			lastState = enablePin;
 		}
 
-	if (NVM->SystemParams.enablePinMode == ENABLE_PIN_MODE_ACTIVE_HIGH)
+	if (NVM->SystemParams.enablePinMode == EnablePinMode::ACTIVE_HIGH)
 	{
 		enableState = enablePin;
 	}
-	if (NVM->SystemParams.enablePinMode == ENABLE_PIN_MODE_ACTIVE_LOW)
+	else if (NVM->SystemParams.enablePinMode == EnablePinMode::ACTIVE_LOW)
 	{
 		enableState = !enablePin;
 	}
-	if (NVM->SystemParams.enablePinMode == ENABLE_PIN_MODE_ALWAYS)
+	else if (NVM->SystemParams.enablePinMode == EnablePinMode::ALWAYS_ON)
 	{
 		enableState = true;
 	}
+	else{}
+	
 #endif
 
 #ifdef USE_STEP_DIR_SERIAL
@@ -461,7 +470,8 @@ static void enableInput(void)
 	lastState = enableState;
 }
 
-//
+//Timer 5 interrupt - set to occur at rate NZS_CONTROL_LOOP_HZ?
+//seems like its set to TC5 overflow rate.. why is it occurring so often? **FFF
 void TC5_Handler()
 {
 	interrupts();		//allow other interrupts
@@ -473,7 +483,7 @@ void TC5_Handler()
 		error = (stepperCtrl.processFeedback()); //handle the control loop
 		RED_LED(error);
 
-#ifdef PIN_ENABLE
+#ifdef PIN_ERROR
 		GPIO_OUTPUT(PIN_ERROR);
 		
 		bool level = !NVM->SystemParams.errorLogic;
@@ -526,11 +536,11 @@ void validateAndInitNVMParams(void)
 		LOG("sys param invalid");
 		SystemParams_t params;
 		params.microsteps = 16;
-		params.controllerMode = CTRL_SIMPLE;
-		params.dirPinRotation = RotationDir_t::CW_ROTATION; 			//default to clockwise rotation when dir is high
+		params.controllerMode = feedbackCtrl::SIMPLE;
+		params.dirPinRotation = RotationDir::CW; 				//default to clockwise rotation when dir is high
 		params.errorLimit = (int32_t)ANGLE_FROM_DEGREES(1.8);
-		params.errorPinMode = ERROR_PIN_MODE_ACTIVE_LOW; 	//default to active low
-		params.enablePinMode = ENABLE_PIN_MODE_ALWAYS;	//default to always on
+		params.errorPinMode = ErrorPinMode::ACTIVE_LOW; 		//default to active low
+		params.enablePinMode = EnablePinMode::ALWAYS_ON;		//default to always on
 		params.homePin = -1;
 		params.errorLogic = false;
 		params.enableLogic = false;
@@ -562,31 +572,29 @@ static void syncBOD33(void)
 //Configure brownout level
 static void configure_bod(void)
 {
-	SYSCTRL->BOD33.reg = SYSCTRL_BOD33_ACTION_INTERRUPT | //generate interrupt when BOD is triggered
-	SYSCTRL_BOD33_LEVEL(48) | //about 3.2V
-	//SYSCTRL_BOD33_HYST | //enable hysteresis
-	SYSCTRL_BOD33_ENABLE; //turn module on
+	SYSCTRL->BOD33.reg = SYSCTRL_BOD33_ACTION_INTERRUPT |  //generate interrupt when BOD is triggered
+	SYSCTRL_BOD33_LEVEL(40) |	//about 3V, was 48 (3.2V)
+	SYSCTRL_BOD33_HYST |		//enable hysteresis
+	SYSCTRL_BOD33_ENABLE;		//turn module on
 
 	LOG("BOD33 %02X", SYSCTRL->BOD33.reg);
 	SYSCTRL->INTENSET.reg |= SYSCTRL_INTENSET_BOD33DET;
 
-	NVIC_SetPriority(SYSCTRL_IRQn, 1); //make highest priority as we need to save eeprom		//**FF only save eep in menu?
-	// Enable InterruptVector
-	NVIC_EnableIRQ(SYSCTRL_IRQn);
+	NVIC_SetPriority(SYSCTRL_IRQn, 1);			//make highest priority as we need to save eeprom //save what?
+	
+	NVIC_EnableIRQ(SYSCTRL_IRQn);				// Enable InterruptVector
 }
 
 //
 void NZS::begin(void)
 {
 	int to = 20;
-	stepCtrlError_t stepCtrlError;
+	volatile stepCtrlError stepCtrlError;
 
 	//set up the pins correctly on the board.
 	boardSetupPins();
-
-	//start up the USB serial interface
-	//TODO check for power on USB before doing this...
-	SerialUSB.begin(SERIAL_BAUD);
+	RED_LED(true);
+	adc.begin();			//enable ADC
 
 	//setup the serial port for syslog
 	Serial5.begin(SERIAL_BAUD);
@@ -598,12 +606,31 @@ void NZS::begin(void)
 #else
 	SysLogInit(NULL, LOG_WARNING);
 #endif
-
+	
 	LOG("Power up!");
-	pinMode(PIN_USB_PWR, INPUT);
+	
+	while (0)
+	{
+		volatile float y;
+		volatile uint32_t temp;
+		volatile int x = 0;
+		
+		y = adc.GetMotorVoltage();
+		temp = adc.getTemperature();
+		
+		x = adc.read_blocking(adcPortMap::_PA04);
+		x = adc.read_blocking(adcPortMap::_PB03);
+	
+		delay(100);
+	}
+	
+	
 
 	if (digitalRead(PIN_USB_PWR))
 	{
+		//start up the USB serial interface
+		SerialUSB.begin(SERIAL_BAUD);
+		
 		//wait for USB serial port to come alive
 		while (!SerialUSB)
 		{
@@ -629,65 +656,60 @@ void NZS::begin(void)
 		eepromRead((uint8_t *)&PowerupEEPROM, sizeof(PowerupEEPROM));
 	}
 
-#ifndef DISABLE_LCD
-	configure_bod();		//configure the BOD
+	configure_bod(); 				//configure the brownout detect
+
 	LOG("Testing LCD");
 	Lcd.begin(&stepperCtrl);		//Attempt connection to LCD
-	//Lcd.present = true/false
 	Lcd.showSplash();				//Splash screen
-#endif
 
 	LOG("command init!");
-	commandsInit(); //setup command handler system
-	stepCtrlError = STEPCTRL_NO_CAL;
+	commandsInit();					//setup command handler system
+	stepCtrlError = stepCtrlError::No_CAL;
 
-	while (STEPCTRL_NO_ERROR != stepCtrlError)
+	while (stepCtrlError::No_ERROR != stepCtrlError)
 	{
 		LOG("init the stepper controller");
 		stepCtrlError = stepperCtrl.begin(); //start controller before accepting step inputs
 
 		//todo we need to handle error on LCD and through command line
-		if (STEPCTRL_NO_POWER == stepCtrlError)
+		if(stepCtrlError::No_POWER == stepCtrlError)
 		{
 			SerialUSB.println("Appears that there is no Motor Power");
 			SerialUSB.println("Connect motor power!");
-#ifndef DISABLE_LCD
 			Lcd.lcdShow("Waiting:", "Motor", "Power");
-#endif
-			while (STEPCTRL_NO_POWER == stepCtrlError)
+
+			while (stepCtrlError::No_POWER == stepCtrlError)
 			{
 				stepCtrlError = stepperCtrl.begin(); //start controller before accepting step inputs
 			}
 		}
-
-		if (STEPCTRL_NO_CAL == stepCtrlError)
+		
+		
+		//TODO: allow setting motor current prior to calibration...
+		if (stepCtrlError:: No_CAL == stepCtrlError)
 		{
 			SerialUSB.println("You need to Calibrate");
-#ifndef DISABLE_LCD
 			Lcd.lcdShow("   NOT ", "Calibrated", " ");
 			delay(1000);
 			Lcd.setMenu(MenuCal);
 			Lcd.forceMenuActive();
 
 			//TODO add code here for LCD and command line loop
-			while (false == stepperCtrl.calibrationValid())
+			while(false == stepperCtrl.calibrationValid())
 			{
 				commandsProcess(); //handle commands
 				Lcd.process();
 			}
-
 			Lcd.setMenu(NULL);
-#endif
 		}
 
-		if (STEPCTRL_NO_ENCODER == stepCtrlError)
+		if (stepCtrlError::No_ENCODER == stepCtrlError)
 		{
 			SerialUSB.println("AS5047D not working");
 			SerialUSB.println(" try disconnecting power from board for 15+mins");
 			SerialUSB.println(" you might have to short out power pins to ground");
-#ifndef DISABLE_LCD
 			Lcd.lcdShow("Encoder", " Error!", " REBOOT");
-#endif
+
 			while (1)
 			{
 
@@ -695,15 +717,13 @@ void NZS::begin(void)
 		}
 
 	}
-#ifndef DISABLE_LCD
+
+	stepPinSetup();			//setup the step pin		//race issue where TC5 is triggering before TC2 setup.
 	Lcd.setMenu(MenuMain);
-#endif
-
-	stepPinSetup(); //setup the step pin
-
+	
 #ifdef PIN_ENABLE
-	attachInterrupt(digitalPinToInterrupt(PIN_ENABLE), enableInput, CHANGE);
-	//NVIC_SetPriority(EIC_IRQn, 0); //set port A interrupt as highest priority		//**FF
+	//attachInterrupt(digitalPinToInterrupt(PIN_ENABLE), enableInput, CHANGE);
+	NVIC_SetPriority(EIC_IRQn, 0); //set port A interrupt as highest priority		//**FF
 #else
 	//attachInterrupt(digitalPinToInterrupt(PIN_ERROR), enableInput, CHANGE);
 #endif
@@ -772,7 +792,6 @@ void printLocation(void)
 	{
 		RED_LED(true);
 	}
-
 	return;
 }
 
@@ -781,31 +800,31 @@ void NZS::loop(void)
 {
 	eepromData_t eepromData;
 
-	//   if (dataEnabled==0)
-	//   {
-	//      LOG("loop time is %dus",stepperCtrl.getLoopTime());
-	//   }
+	   if (dataEnabled == 1)
+	   {
+	      LOG("loop time is %dus",stepperCtrl.getLoopTime());
+	   }
 
-	//read the enable pin and update
-	// this is also done as an edge interrupt but does not always see
-	// to trigger the ISR.
+	// Read the enable pin and update
+	// this is also done as an edge interrupt but does not always see to trigger the ISR.
 	enableInput(); //**FF interrupt should always occur, check..
 
 	if (enableState != stepperCtrl.getEnable())
 	{
 		stepperCtrl.enable(enableState);
 	}
-
-	//handle EEPROM
+	
+	//Continuously update EEPROM with current position 
+	if(UPDATE_EEPROM)
+	{
 	eepromData.angle = stepperCtrl.getCurrentAngle();
 	eepromData.encoderAngle = stepperCtrl.getEncoderAngle();
 	eepromData.valid = 1;
 	eepromWriteCache((uint8_t *)&eepromData, sizeof(eepromData));
-
+	}
+	
 	commandsProcess(); //handle commands
-#ifndef DISABLE_LCD
 	Lcd.process();
-#endif
 	//stepperCtrl.PrintData(); //prints steps and angle to serial USB.
 
 	printLocation(); //print out the current location

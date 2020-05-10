@@ -45,8 +45,7 @@ int CommandInit(sCmdUart *ptrUart, uint8_t (*kbhit)(void), uint8_t (*getch)(void
 	return 0;
 }
 
-#ifdef PGM_P //check and see if the PGM_P is defined for the AVR
-
+//
 int CommandPrintf(sCmdUart *ptrUart, const char *fmt, ...)
 {
 	int ret = 0;
@@ -78,36 +77,6 @@ int CommandPrintf(sCmdUart *ptrUart, const char *fmt, ...)
 	}
 	return 0;
 }
-
-#else
-int CommandPrintf(sCmdUart *ptrUart, char *fmt, ...)
-{
-	int ret = 0;
-	char vastr[MAX_STRING] = {0};
-	char *ptr;
-	va_list ap;
-
-	memset(vastr, 0, MAX_STRING);
-	va_start(ap, fmt);
-	ret = vsprintf(vastr, (char *)fmt, ap);
-	if (ptrUart->puts != NULL)
-	{
-		return ptrUart->puts((uint8_t *)vastr, (uint8_t)ret);
-	}
-
-	if (ptrUart->putch != NULL)
-	{
-		ptr = vastr;
-		while (*ptr)
-		{
-			ptrUart->putch(*ptr++);
-		}
-
-		return ret;
-	}
-	return 0;
-}
-#endif
 
 // the delimiter is command/parameter delimiter
 // by default a ' '0x20 is used but for the TDR with GUI a ':' was preferred, not sure why
@@ -252,15 +221,10 @@ unsigned int CommandParse(sCmdUart *ptrUart, sCommand *ptrCmds, char *str, char 
 		LOG("comapre is %d",strcmp_P(buff,cmd_list.name));
   */
 		//memcpy_P(&p, cmd_list.name, sizeof(PGM_P));
-#ifdef PGM_P //check and see if the PGM_P is defined for the AVR
+
 		if (strlen(buff) == strlen_P(cmd_list.name))
 		{
 			if (strcicmp(buff, cmd_list.name) == 0) //ignore device ID
-#else
-		if (strlen(buff) == strlen(cmd_list.name))
-		{
-			if (strcicmp(buff, cmd_list.name) == 0) //ignore device ID
-#endif
 			{
 				//LOG("calling function");
 				//return 1;
