@@ -42,7 +42,7 @@ void checkDir()
 	}
 }
 
-//this function can not be called in interrupt context as the overflow interrupt for tC4 needs to run.
+//this function cannot be called in interrupt context as the overflow interrupt for tC4 needs to run.
 int64_t getSteps(void)
 {
 	int64_t x;
@@ -112,16 +112,15 @@ void enableEIC(void)
 	}
 }
 
+//
 void setupStepEvent(void)
 {
 	//we will set up the EIC to generate an even on rising edge of step pin
-	//make sure EIC is setup
-	enableEIC();
+	enableEIC();					//make sure EIC is setup
 
 	// Assign step pin to EIC
-	// Step pin is EXTINT11
-	pinPeripheral(PIN_STEP_INPUT, PIO_EXTINT);
-	pinPeripheral(PIN_DIR_INPUT, PIO_EXTINT);
+	pinPeripheral(PIN_STEP_INPUT, PIO_EXTINT);		// Step pin is EXTINT11
+	pinPeripheral(PIN_DIR_INPUT, PIO_EXTINT);		//
 
 	//***** setup EIC ******
 	EIC->EVCTRL.bit.EXTINTEO11 = 1; //enable event for EXTINT11
@@ -167,8 +166,7 @@ void setupStepEvent(void)
 	//Setup the timer counter
 	PM->APBCMASK.reg |= PM_APBCMASK_TCC2;		//Enable TCC2 clock
 	GCLK->CLKCTRL.reg = (uint16_t)(GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN_GCLK0 | GCLK_CLKCTRL_ID(GCM_TCC2_TC3)); // Enable GCLK for TCC2 (timer counter input clock)
-	while (GCLK->STATUS.bit.SYNCBUSY)
-		;
+	while (GCLK->STATUS.bit.SYNCBUSY);
 
 	TCC2->CTRLA.reg &= ~TCC_CTRLA_ENABLE;	//Disable TCC2
 	WAIT_TCC2_SYNC();
@@ -176,9 +174,6 @@ void setupStepEvent(void)
 	TCC2->CTRLA.reg = TCC_CTRLA_SWRST;		//Reset TCC2
 	WAIT_TCC2_SYNC();						//
 	while (TCC2->CTRLA.bit.SWRST == 1) ;	//wait for reset to complete
-
-	//TCC2->WAVE.reg = TCC_WAVE_WAVEGEN_NFRQ;	//wavegen: normal frequency, max PER (8bit), max (16-32bit)
-	//WAIT_TCC2_SYNC();
 
 	TCC2->EVCTRL.reg =	TCC_EVCTRL_EVACT0_COUNTEV |		//event0: count
 						TCC_EVCTRL_TCEI0	|			//enable incoming event 0

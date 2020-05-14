@@ -15,6 +15,8 @@
 
 // Standard ASCII 5x7 font
 
+//https://community.arduboy.com/t/a-small-program-to-display-the-font/145/3
+
 static const unsigned char font[] PROGMEM = {
 	0x00, 0x00, 0x00, 0x00, 0x00,
 	0x3E, 0x5B, 0x4F, 0x5B, 0x3E,

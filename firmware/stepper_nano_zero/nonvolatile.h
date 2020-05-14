@@ -26,10 +26,10 @@ typedef struct {
 } PIDparams_t;
 
 typedef struct {
-	int32_t currentMa;  		 //maximum current for the motor
-	int32_t currentHoldMa; 		//hold current for the motor
-	int32_t homeMa; 			//maximum current when error homing
-	int32_t homeHoldMa; 		//hold current when error homing
+	int32_t currentMa;  			//maximum current for the motor
+	int32_t currentHoldMa; 			//hold current for the motor
+	int32_t homeMa; 				//maximum current when error homing
+	int32_t homeHoldMa; 			//hold current when error homing
 	int32_t fullStepsPerRotation; //how many full steps per rotation is the motor
 	bool motorWiring;   			//forward wiring of motor or reverse
 	bool parametersValid;

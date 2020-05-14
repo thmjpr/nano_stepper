@@ -31,6 +31,21 @@
 //TODO:
 //can show direction/step/error/enable pin status on LCD, maybe just enable?
 
+//can show motor current or power level on LCD
+
+//go back to bidir if marlin supports?
+
+//adapter board required (JST see mks)
+
+//anti-hunt and enter standby after x seconds (?), maybe not needed
+
+/*A4950 vref in:
+- 0 to 5V
+- 10V/V roughly, 1.0V = 1A
+- Itripmax = Vref/(10*0.1) = 3.3A max (max of dac?)
+
+*/
+
 eepromData_t PowerupEEPROM = { 0 };
 volatile bool enableState = true;
 int32_t dataEnabled = 0;	//print out
@@ -41,28 +56,13 @@ ADC_Peripheral adc;			//
 int menuInfo(int argc, char *argv[])
 {
 	skip_when_no_display();
-
-	int temp, volt;
-	char str[3][20];
 	
-	adc.begin();
-	temp = (int)adc.getTemperature();
-	volt = (int)adc.GetMotorVoltage();
-
-	sprintf(str[0], "v = %03d", volt);
-	sprintf(str[1], "t = %03dC", temp);
-	sprintf(str[2], "x = ");
-
-	str[0][10] = '\0';
-	str[1][10] = '\0';
-	str[2][10] = '\0';
-	Lcd.lcdShow(str[0], str[1], str[2]);
+	Lcd.showInfo();
 	
-	//show the values for 2s then go back?
-	delay(1000);
+	delay(900);			//show for a bit
 	return 0;
 }
-
+	
 int menuCalibrate(int argc, char *argv[])
 {
 	skip_when_no_display();
@@ -470,14 +470,27 @@ static void enableInput(void)
 	lastState = enableState;
 }
 
+static void time_handler(void)
+{
+	static bool led = false;
+	if (led)
+		GPIO_HIGH(PIN_GREEN_LED)
+	else
+		GPIO_LOW(PIN_GREEN_LED)
+	led = !led;
+}
+
 //Timer 5 interrupt - set to occur at rate NZS_CONTROL_LOOP_HZ.
+//Handler time: 45cyc entry, 5621 complete (wha?)
+//debug off: 37cyc, 4475 complete
+//__attribute__((section(".data")))  not enough space to put in RAM
 
 void TC5_Handler()
 {
 	int error;
 	
+	TC5->COUNT16.INTFLAG.bit.MC0 = 1;  	//Clear compare match flag
 	interrupts(); 						//allow other interrupts
-	TC5->COUNT16.INTFLAG.bit.MC0 = 1; 	//Clear compare match flag
 	
 	error = (stepperCtrl.processFeedback());  //handle the control loop
 	RED_LED(error); 					//light red LED when any error
@@ -531,7 +544,7 @@ void validateAndInitNVMParams(void)
 	if (false == NVM->pPID.parametersValid)
 	{
 		LOG("pPID invalid %0x", NVM->pPID.parametersValid);
-		nvmWrite_pPID(1.0, 0, 0);
+		nvmWrite_pPID(1.0, 0.001, 0.01);
 	}
 
 	if (false == NVM->vPID.parametersValid)
@@ -599,13 +612,11 @@ void NZS::begin(void)
 	int to = 20;
 	volatile stepCtrlError stepCtrlError;
 
-	//set up the pins correctly on the board.
-	boardSetupPins();
-	RED_LED(true);
+	boardSetupPins();		//set up the pins correctly on the board.
+	RED_LED(true);			//
 	adc.begin();			//enable ADC
 
-	//setup the serial port for syslog
-	Serial5.begin(SERIAL_BAUD);
+	Serial5.begin(SERIAL_BAUD);	//setup the serial port for syslog
 
 #ifndef CMD_SERIAL_PORT
 	SysLogInit(&Serial5, LOG_DEBUG); //use SWO for the sysloging
@@ -647,59 +658,41 @@ void NZS::begin(void)
 		eepromRead((uint8_t *)&PowerupEEPROM, sizeof(PowerupEEPROM));
 	}
 
-	configure_bod(); 				//configure the brownout detect
+	configure_bod(); 					//configure the brownout detect
 
 	LOG("Testing LCD");
-	Lcd.begin(&stepperCtrl);		//Attempt connection to LCD
-	Lcd.showSplash();				//Splash screen
+	Lcd.begin(&stepperCtrl, &adc);		//Attempt connection to LCD
+	Lcd.showSplash();					//Splash screen
 
 	LOG("command init!");
 	commandsInit();					//setup command handler system
 	stepCtrlError = stepCtrlError::No_CAL;
-	
 		
-	while (0)
-	{
-		volatile float y;
-		volatile uint32_t temp;
-		volatile int x = 0;
-		
-		y = adc.GetMotorVoltage();
-		temp = adc.getTemperature();
-		
-		x = adc.read_blocking(adcPortMap::_PA04);
-		x = adc.read_blocking(adcPortMap::_PB03);
-	
-		delay(100);
-		//Lcd.process();
-	}
-	
 	
 	while (stepCtrlError::No_ERROR != stepCtrlError)
 	{
 		LOG("init the stepper controller");
-		stepCtrlError = stepperCtrl.begin(); //start controller before accepting step inputs
+		stepCtrlError = stepperCtrl.begin(&Lcd); //start controller before accepting step inputs
 
 		//todo we need to handle error on LCD and through command line
 		if(stepCtrlError::No_POWER == stepCtrlError)
 		{
-			SerialUSB.println("Appears that there is no Motor Power");
+			SerialUSB.println("Appears that there is no Motor Power");			//No motor power, driver IC dead, or bad cable to motor
 			SerialUSB.println("Connect motor power!");
 			Lcd.lcdShow("Waiting:", "Motor", "Power");
 
 			while (stepCtrlError::No_POWER == stepCtrlError)
 			{
-				stepCtrlError = stepperCtrl.begin(); //start controller before accepting step inputs
+				stepCtrlError = stepperCtrl.begin(&Lcd);  //start controller before accepting step inputs
 			}
 		}
-		
 		
 		//TODO: allow setting motor current prior to calibration...
 		if (stepCtrlError:: No_CAL == stepCtrlError)
 		{
 			SerialUSB.println("You need to Calibrate");
 			Lcd.lcdShow("   NOT ", "Calibrated", " ");
-			delay(1000);
+			delay(800);
 			Lcd.setMenu(MenuCal);
 			Lcd.forceMenuActive();
 
@@ -832,11 +825,13 @@ void NZS::loop(void)
 	eepromWriteCache((uint8_t *)&eepromData, sizeof(eepromData));
 	}
 	
-	commandsProcess(); //handle commands
-	Lcd.process();
+	commandsProcess();		//handle commands
+	Lcd.process();			//update display and process keypresses - approx 1000 cycles
 	//stepperCtrl.PrintData(); //prints steps and angle to serial USB.
-
-	printLocation(); //print out the current location
+	printLocation();		//print out the current location
+	
+	//if millis() 500 -> measure temperature, etc. stuff thats not required often
+	
 
 	return;
 }

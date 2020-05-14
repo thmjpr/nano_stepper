@@ -28,7 +28,7 @@
 #define NZS_FAST_CAL			//define this to use 32k of flash for fast calibration table
 #define NZS_FAST_SINE			//uses 2048 extra bytes to implement faster sine tables
 #define NZS_AS5047_PIPELINE		//does a pipeline read of encoder, which is slightly faster 
-#define NZS_CONTROL_LOOP_HZ (6000) //update rate of control loop
+#define NZS_CONTROL_LOOP_HZ (5000)	//(6000) //update rate of control loop  **FF need to check what performance is affected
 
 #define NZS_LCD_ABSOLUTE_ANGLE  //define this to show angle from zero in positive and negative direction
 								// for example 2 rotations from start will be angle of 720 degrees
@@ -257,6 +257,7 @@ enum class feedbackCtrl {
 	#define PIN_SW3 (14)		  //A0 = PA02 = 14
 	#define PIN_SW2 (15)		  //A1 = PB08 = 15
 	#define PIN_TEMPERATURE (2)   //D2 = PA14 - NTC temperature near motor driver		//change to PB03 -> AIN[11]??
+	#define PIN_TEMPERATURE2 (25)//PB03
 	#define PIN_ERROR (3)		  //D3 = PA09
 	#define PIN_ENABLE (10)		  //D10 = PA18
 	#define PIN_VMOTOR (17)	      //A3 = PA04 = 17 - 10k/1k voltage divider from input voltage		//PA04 -> AIN[4]
@@ -365,11 +366,13 @@ static void boardSetupPins(void)
 	pinMode(PIN_STEP_INPUT, INPUT_PULLDOWN);
 	pinMode(PIN_DIR_INPUT, INPUT_PULLDOWN);
 	
-	pinMode(PIN_TEMPERATURE, INPUT);	//PIN_TEMPERATURE	//something pulling PA14 high? pin no longer used
-	pinMode(PIN_VMOTOR, INPUT); 		//PIN_VMOTOR
+	pinPeripheral(PIN_TEMPERATURE, PIO_ANALOG);		//PIN_TEMPERATURE	//PA14 not used, moved to PB03
+	pinPeripheral(PIN_TEMPERATURE2, PIO_ANALOG);	//
+	pinPeripheral(PIN_VMOTOR, PIO_ANALOG);			//
 	
-	//pinPeripheral(PIN_TEMPERATURE, PIO_ANALOG);
-	//pinPeripheral(PIN_VMOTOR, PIO_ANALOG);
+	//usb lib is taking over rxled/txled
+	#undef PIN_LED_RXL          
+	#undef PIN_LED_TXL
 #else
 	pinMode(PIN_STEP_INPUT, INPUT);
 	pinMode(PIN_DIR_INPUT, INPUT);

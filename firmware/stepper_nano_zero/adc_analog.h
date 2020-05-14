@@ -26,13 +26,13 @@ static bool dacEnabled[2];
 #endif
 
 //auto casting, -std-c++14 required
+/*
 #include <type_traits>
 template <typename E>
 	constexpr auto to_underlying(E e) noexcept
 {
 	return static_cast<std::underlying_type_t<E>>(e);
-}
-
+}*/
 
 //samd21 only? need to check
 #if defined(__SAMD51__)
@@ -73,10 +73,10 @@ enum class adcPortMap
 	_PB05 = static_cast<uint32_t>(adcMuxPins::AIN13),
 	_PB06 = static_cast<uint32_t>(adcMuxPins::AIN14),
 	_PB07 = static_cast<uint32_t>(adcMuxPins::AIN15),
-	_PA08 = static_cast<uint32_t>(adcMuxPins::AIN16),
-	_PA09 = static_cast<uint32_t>(adcMuxPins::AIN17),
-	_PA10 = static_cast<uint32_t>(adcMuxPins::AIN18),
-	_PA11 = static_cast<uint32_t>(adcMuxPins::AIN19),
+	_PA08 = static_cast<uint32_t>(adcMuxPins::AIN16),	//Powered via VDDIO, lower performance
+	_PA09 = static_cast<uint32_t>(adcMuxPins::AIN17),	//Powered via VDDIO, lower performance
+	_PA10 = static_cast<uint32_t>(adcMuxPins::AIN18),	//Powered via VDDIO, lower performance
+	_PA11 = static_cast<uint32_t>(adcMuxPins::AIN19),	//Powered via VDDIO, lower performance
 	//...
 };
 
@@ -91,8 +91,8 @@ private:
 public:
 	void begin(void);
 	uint32_t read_blocking(adcPortMap pin);
-	float GetMotorVoltage(void);
-	int32_t getTemperature(void);
+	float getMotorVoltage(void);
+	float getTemperature(void);
 	
 	//int32_t readPort(); 			//read using standard port designation
 	//int32_t readPinArduino()		//read using pin number

@@ -85,7 +85,7 @@ class StepperCtrl
 #elif defined A4954_DRIVER
 		A4954 stepperDriver;
 #endif
-	
+
 		uint16_t startUpEncoder;
 		volatile int32_t ticks = 0;
 		volatile Location_t locs[MAX_NUM_LOCATIONS];
@@ -156,21 +156,20 @@ class StepperCtrl
 		CalibrationTable calTable;
 		//void printData(void);
 
-		bool calibrateEncoder(LCD * lcd_d = nullptr); //do manual calibration of the encoder
-		Angle maxCalibrationError(void); //measures the maximum calibration error as an angle
+		bool calibrateEncoder(LCD * lcd_d = nullptr);	//do manual calibration of the encoder
+		Angle maxCalibrationError(void);				//measures the maximum calibration error as an angle
 
 		void moveToAbsAngle(int32_t a);
 		void moveToAngle(int32_t a, uint32_t ma);
 
-		stepCtrlError begin(void);			//returns false if we can not use motor
-
-		bool processFeedback(void); // does the feedback loop
+		stepCtrlError begin(LCD * lcd_d = nullptr); 	//returns false if we can not use motor
 
 		feedbackCtrl getControlMode(void) { return systemParams.controllerMode;};
 
 		void updateSteps(int64_t steps);
 		void requestStep(int dir, uint16_t steps); //requests a step, if feedback controller is off motor does not move
 
+		bool processFeedback(void);					// does the feedback loop
 		void feedback(bool enable);
 		bool getFeedback(void) {return enableFeedback;}
 

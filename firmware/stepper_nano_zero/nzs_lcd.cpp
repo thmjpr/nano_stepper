@@ -14,14 +14,13 @@
  *********************************************************************/
 
 #include "nzs_lcd.h"
-#include <string.h>
-#include <stdio.h>
+#include "printf.h"
 #include <Wire.h>
 
 #ifndef DISABLE_LCD
 #define skip_when_no_display() if(displayEnabled == false){return;}
 
-void LCD::begin(StepperCtrl *ptrsCtrl)
+void LCD::begin(StepperCtrl *ptrsCtrl, ADC_Peripheral *ptrsADC)
 {
 #ifndef MECHADUINO_HARDWARE
 	pinMode(PIN_SW1, INPUT_PULLUP);
@@ -30,8 +29,8 @@ void LCD::begin(StepperCtrl *ptrsCtrl)
 #endif
 	buttonState = 0;
 
-	//we need access to the stepper controller
-	ptrStepperCtrl = ptrsCtrl; //save a pointer to the stepper controller
+	ptrStepperCtrl = ptrsCtrl;		//pointer to the stepper controller
+	ptrADC = ptrsADC;				//pointer to ADC
 
 	ptrMenu = NULL;
 	menuIndex = 0;
@@ -42,7 +41,8 @@ void LCD::begin(StepperCtrl *ptrsCtrl)
 
 	//check that the SCL and SDA are pulled high
 	pinMode(PIN_SDA, INPUT);
-	pinMode(PIN_SCL, INPUT);
+	pinMode(PIN_SCL, INPUT_PULLDOWN);
+	delay(1);
 
 	if (digitalRead(PIN_SDA) == 0)
 	{
@@ -303,7 +303,7 @@ void __attribute__((optimize("Ofast")))LCD::process(void)
 }
 
 //--------------------------------------------
-// 
+// Normal status screen with RPM and error
 void LCD::showStatus()
 {
 	skip_when_no_display();
@@ -313,9 +313,9 @@ void LCD::showStatus()
 	static uint32_t t0 = 0;
 	static bool rpmDone = false;
 	static int64_t lastAngle, degrees;
-	static int32_t rpm = 0, lasttime = 0, dt =0;
+	static int32_t rpm = 0, lasttime = 0, dt = 0;
 
-	if ((millis() - t0) > 500)		//update every 500ms
+	if ((millis() - t0) > 100)		//update every 500ms
 		{
 			int32_t x = 0, y, d;
 
@@ -412,48 +412,37 @@ void LCD::showStatus()
 				display.setCursor(0, 45);
 				display.println(buf);
 	
-				//put degrees symbol..
-	
-	
-				//----------------- control mode
+				//put degrees symbol.. char(0xF7);
+				
+				//Temperature and voltage
 				display.setTextSize(1);
 				display.setCursor(90, 52);
-	
-				switch (ptrStepperCtrl->getControlMode())
-				{
-				case feedbackCtrl::SIMPLE:
-					sprintf(buf, "simpl");
-					break;
-
-				case feedbackCtrl::POS_PID:
-					sprintf(buf, "pPID");
-					break;
-
-				case feedbackCtrl::POS_VELOCITY_PID:
-					sprintf(buf, "vPID");
-					break;
-
-				case feedbackCtrl::OPEN:
-					sprintf(buf, "open");
-					break;
-				case feedbackCtrl::OFF:
-					sprintf(buf, "off");
-					break;
-				default:
-					display.setCursor(80, 52);
-					sprintf(buf, "err %u", (uint32_t)ptrStepperCtrl->getControlMode());
-					break;
-				}
+				uint8_t v = (uint8_t)ptrADC->getMotorVoltage();
+				uint8_t t = (uint8_t)ptrADC->getTemperature();
+				
+				sprintf(buf, "%dV %dC", v, t);
+				display.setCursor(70, 52);
 				display.println(buf);
-	
+				
+				//power meter?
+				char buf1[] = { 218, 218, 218, 0x5F, 0x5F, 0x00 };
+				display.setCursor(70, 40);
+				display.println(buf1);
+				
 				//Er En, !Er !En maybe?
-	
-	
+				
+		
 				display.display();   		//update
 			}
 		}
 }
 
+
+//Show a 100x encoded number as a float..
+static void show_100x_number(uint32_t number, uint8_t decimal)
+{
+	
+}
 
 //--------------------------------------------
 // 
@@ -489,6 +478,74 @@ void LCD::showCalibration(int current_step)
 
 	//TODO: could also put a deviation plot, etc. 
 	display.display();		//update
+}
+
+//Show step size in degrees on display for 0.5s
+void LCD::showStepSize(float step)
+{
+	char buf[30] = { 0 };
+	int8_t x;
+	
+	display.clearDisplay();
+	display.setTextSize(2);
+	display.setTextColor(WHITE);
+	
+	display.setCursor(20, 0);
+	display.print("Step:");
+	display.setCursor(25, 25);
+	
+	x = (int8_t)step;
+
+	sprintf(buf, "%d.%02d", x, abs((int8_t)((step - x + 0.005)*100)));			//could add -printf compile flags
+	buf[strlen(buf) + 1] = '\0';
+	buf[strlen(buf)] = char(0xF7);			//degrees symbol, not ideal
+	display.println(buf);	
+	display.display(); 		//update
+
+	delay(800);	
+}
+
+//screen to show all the info in smaller font: motor current, control mode, etc.? maybe show on startup?
+void LCD::showInfo()
+{
+	char buf[30];
+	
+	uint8_t temp, volt;
+	char str[3][20];
+	
+	//Control mode
+	display.setTextSize(1);
+	display.setCursor(0, 0);
+	
+	switch (ptrStepperCtrl->getControlMode())
+	{
+	case feedbackCtrl::SIMPLE:
+		sprintf(buf, "control: simple");
+		break;
+
+	case feedbackCtrl::POS_PID:
+		sprintf(buf, "control: pos PID");
+		break;
+
+	case feedbackCtrl::POS_VELOCITY_PID:
+		sprintf(buf, "control: velo PID");
+		break;
+
+	case feedbackCtrl::OPEN:
+		sprintf(buf, "control: open");
+		break;
+	case feedbackCtrl::OFF:
+		sprintf(buf, "control: off");
+		break;
+	default:
+		display.setCursor(80, 52);
+		sprintf(buf, "error: %u", (uint32_t)ptrStepperCtrl->getControlMode());
+		break;
+	}
+	display.println(buf);
+	
+	
+	
 }
 
 
@@ -561,6 +618,7 @@ const uint8_t LCD::icon_splash_screen[] = {
 	0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
 	0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0
 };
+
 
 #else		//LCD display disabled
 void LCD::updateLCD(void){return;}

@@ -136,8 +136,8 @@ void StepperCtrl::updateParamsFromNVM(void)
 		motorParams.fullStepsPerRotation = 200;
 		motorParams.currentHoldMa = 400;
 		motorParams.currentMa = 600;
-		motorParams.homeHoldMa = 600;
-		motorParams.homeMa = 800;
+		motorParams.homeHoldMa = 500;
+		motorParams.homeMa = 500;
 		motorParams.motorWiring = true;
 		//memcpy((void *)&Params, (void *)&motorParams, sizeof(motorParams));
 		//nvmWriteMotorParms(Params);
@@ -469,7 +469,9 @@ bool StepperCtrl::calibrateEncoder(LCD * lcd_d)
 		Angle cal, desiredAngle;
 		desiredAngle = (uint16_t)(getDesiredLocation() & 0x0FFFFLL);
 		cal = calTable.getCal(desiredAngle);
-		lcd_d->showCalibration(j + 1);
+		
+		if (lcd_d != nullptr)
+			lcd_d->showCalibration(j + 1);
 
 		delay(20);//200
 		mean = sampleMeanEncoder(200);
@@ -519,7 +521,7 @@ bool StepperCtrl::calibrateEncoder(LCD * lcd_d)
 	return done;
 }
 
-stepCtrlError StepperCtrl::begin(void)
+stepCtrlError StepperCtrl::begin(LCD * lcd_d)
 {
 	int i;
 	float x;
@@ -548,22 +550,21 @@ stepCtrlError StepperCtrl::begin(void)
 	startUpEncoder = (uint16_t)getEncoderAngle();
 	WARNING("encoder angle: %d", startUpEncoder);
 
-//**CCC
-	StepperCtrl::encoderDiagnostics(NULL);
+	//StepperCtrl::encoderDiagnostics(NULL);
 
 	LOG("start stepper driver");
 	stepperDriver.begin();
 	
-	volatile int32_t angles;
-	
+	//test motor driver
 	while (0)
 	{
+			volatile int32_t angles;
 			RED_LED(false);		
 			stepperDriver.move(128, 500);
-			delay(10);
+			delay(200);
 			RED_LED(true);		
 			stepperDriver.move(256, 500);
-			delay(10);	
+			delay(200);	
 		
 			angles = StepperCtrl::sampleAngle();
 	}	
@@ -573,11 +574,11 @@ stepCtrlError StepperCtrl::begin(void)
 	if (NVM->motorParams.parametersValid)
 	{
 		//lets read the motor voltage
-		if (adc.GetMotorVoltage() < 8.0)
+		if (adc.getMotorVoltage() < 5.0)		//read wrong at beginning?
 		{
 			//if we have less than 5 volts the motor is not powered
 			uint32_t x;
-			x = (uint32_t)adc.GetMotorVoltage();
+			x = (uint32_t)adc.getMotorVoltage();
 			ERROR("Motor voltage is %" PRId32 "V", x);	//default printf does not support floating point numbers
 			ERROR("Motor may not have power");
 			return stepCtrlError::No_POWER;
@@ -586,14 +587,18 @@ stepCtrlError StepperCtrl::begin(void)
 		//int32_t x = getTemperature();
 		//LOG("Driver temperature = %03d", x);
 
-		bool state = enterCriticalSection();
-		setLocationFromEncoder(); //measure new starting point
+		bool state = enterCriticalSection();		
+		setLocationFromEncoder();					//measure new starting point
 		exitCriticalSection(state);
 	}
 	else
 	{
 		LOG("motorparam not valid, measuring step size");
-		x = measureStepSize();
+		x = measureStepSize();			//Measure step in degrees
+	
+		if (lcd_d != nullptr)
+			lcd_d->showStepSize(x);
+		
 		if (abs(x) < 0.5)
 		{
 			ERROR("Motor may not have power");
@@ -1297,8 +1302,6 @@ bool StepperCtrl::simpleFeedback(int64_t desiredLoc, int64_t currentLoc, Control
 			probeCount = 0;
 			//maxMa=0;
 		}
-
-
 		y = y + u;
 		ptrCtrl->ma = ma;
 		ptrCtrl->angle = (int32_t)y;
@@ -1342,7 +1345,9 @@ bool StepperCtrl::simpleFeedback(int64_t desiredLoc, int64_t currentLoc, Control
 		errorCount--;
 	}
 
-	stepperDriver.limitCurrent(99);			//reduce noise on low error
+	//if error < x for y seconds, reduce current maybe
+	//stepperDriver.limitCurrent(100);		//reduce noise on low error
+											//what is this doing??
 	return 0;
 }
 
@@ -1425,6 +1430,7 @@ void StepperCtrl::updateLocTable(int64_t desiredLoc, int64_t currentLoc, Control
 	exitCriticalSection(state);
 }
 
+//-----------------------------------
 
 bool StepperCtrl::processFeedback(void)
 {
@@ -1434,7 +1440,7 @@ bool StepperCtrl::processFeedback(void)
 	int64_t desiredLoc;
 	int64_t currentLoc;
 	int32_t steps;
-	static int64_t mean = 0;;
+	static int64_t mean = 0;
 
 	us = micros();
 
@@ -1450,16 +1456,15 @@ bool StepperCtrl::processFeedback(void)
 	currentLoc = getCurrentLocation();
 	mean = (31 * mean + currentLoc + 16) / 32;		//moving average?
 
-	
 	//**FF */Should have some configurable anti-hunt or similar.
 	
-#ifdef A5995_DRIVER //the A5995 is has more driver noise
+#ifdef A5995_DRIVER //the A5995 has more driver noise
 	if (abs(currentLoc - mean) < ANGLE_FROM_DEGREES(0.9))
 #else
 	if (abs(currentLoc - mean) < ANGLE_FROM_DEGREES(0.3))
 #endif
 	{
-		currentLoc = mean;
+		//currentLoc = mean;			
 	}
 
 	switch (systemParams.controllerMode)

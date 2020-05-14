@@ -40,21 +40,29 @@
 class A4954
 {
 private:
-	uint32_t lastStepMicros = 0; // time in microseconds that last step happened
-	bool forwardRotation = true;
-	volatile bool enabled = true;
+	uint32_t lastStepMicros = 0;    // time in microseconds that last step happened
+	bool forwardRotation = true;    //
+	volatile bool enabled = true;   //
+	void enableTCC0(uint8_t percent);               //
+	void setupDAC(void);                            //
+	void setDAC(uint32_t DAC1, uint32_t DAC2);      //
+	void setMotorPWM(uint8_t percent);       //
 
 public:
 	void begin(void);
+	int32_t move(int32_t stepAngle, uint32_t mA);                               //moves motor where the modulo of A4954_NUM_MICROSTEPS is a full step.
+	uint32_t microsSinceStep(void) { return micros() - lastStepMicros; };       //
+	void setRotationDirection(bool forward) { forwardRotation = forward; };     //
+	void enable(bool enable);                                                   //Setup pins to A4954
+	void limitCurrent(uint8_t percent);                                         //Higher more current
+};
 
-	//moves motor where the modulo of A4954_NUM_MICROSTEPS is a full step.
-	int32_t move(int32_t stepAngle, uint32_t mA);
-
-	uint32_t microsSinceStep(void) { return micros() - lastStepMicros; };
-	void setRotationDirection(bool forward) { forwardRotation = forward; };
-
-	void enable(bool enable);
-	void limitCurrent(uint8_t percent); //higher more current
+enum class drvStates
+{
+	Forward = 0, 	    //
+	Reverse = 1, 	   //
+	Brake = 2, 	      //
+	HiZ = 3         //Coast
 };
 
 #endif //__A4954__H__

@@ -10,7 +10,6 @@
  *	All text above, must be included in any redistribution
  *********************************************************************/
 #include "planner.h"
-
 #include "board.h"
 #include "wiring_private.h"
 #include "syslog.h"
@@ -18,6 +17,7 @@
 #include "Arduino.h"
 
 #define WAIT_TC16_REGS_SYNC(x) while(x->COUNT16.STATUS.bit.SYNCBUSY);
+
 
 //define the planner class as being global
 Planner SmartPlanner;
@@ -52,21 +52,20 @@ void TC3_Init(void)
 	TC3->COUNT16.CTRLA.reg |= TC_CTRLA_WAVEGEN_MFRQ;  // Set TC as normal Normal Frq
 	WAIT_TC16_REGS_SYNC(TC3)
 
-	TC3->COUNT16.CTRLA.reg |= TC_CTRLA_PRESCALER_DIV2;    // Set perscaler
+	TC3->COUNT16.CTRLA.reg |= TC_CTRLA_PRESCALER_DIV2;    // Set prescaler
 	WAIT_TC16_REGS_SYNC(TC3)
-
 
 	TC3->COUNT16.CC[0].reg = F_CPU / PLANNER_UPDATE_RATE_HZ / 2;  //divide by two because of prescaler
 
 	WAIT_TC16_REGS_SYNC(TC3)
 
 	TC3->COUNT16.INTENSET.reg = 0;               // disable all interrupts
-	TC3->COUNT16.INTENSET.bit.OVF = 1;           // enable overfollow
+	TC3->COUNT16.INTENSET.bit.OVF = 1;           // enable overflow
 
-	NVIC_SetPriority(TC3_IRQn, 3);
-
-	// Enable InterruptVector
-	NVIC_EnableIRQ(TC3_IRQn);
+	//Interrupts
+	NVIC_ClearPendingIRQ(TC3_IRQn);		//Clear
+	NVIC_SetPriority(TC3_IRQn, 3);		//Set priority low
+	NVIC_EnableIRQ(TC3_IRQn);			//Enable InterruptVector
 
 	// Enable TC
 	TC3->COUNT16.CTRLA.reg |= TC_CTRLA_ENABLE;
@@ -76,11 +75,9 @@ void TC3_Init(void)
 
 void TC3_Handler(void)
 {
-	interrupts();  //allow other interrupts
-	//do the planner tick
-	SmartPlanner.tick();
-	//SerialUSB.println('x');
-	TC3->COUNT16.INTFLAG.bit.OVF = 1;  //clear interrupt by writing 1 to flag
+	TC3->COUNT16.INTFLAG.bit.OVF = 1;   //clear overflow flag
+	interrupts();						//allow other interrupts
+	SmartPlanner.tick();				//do the planner tick
 }
 
 void Planner::begin(StepperCtrl *ptrStepper)

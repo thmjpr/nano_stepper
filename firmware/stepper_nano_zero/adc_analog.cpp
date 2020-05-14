@@ -1,5 +1,5 @@
 #include "adc_analog.h"
-#include <stdio.h>
+#include "printf.h"
 #include "board.h"
 #include "variant.h"
 #include <Arduino.h>
@@ -15,8 +15,10 @@
 //Vref 1/2 or 1/1.48
 
 
-#define ADC_MAX_F 4096.0		//12-bit ADC
+#define ADC_MAX_F 4095.0		//12-bit ADC
 #define V_SUPPLY  3.33			//3.33V supply
+
+#define ADC_GAIN  0.50			//gain is half
 
 
 void ADC_Peripheral::begin()
@@ -64,7 +66,7 @@ adc->SWTRIG.bit.START = 1;
 	ADC->INPUTCTRL.bit.MUXNEG = ADC_INPUTCTRL_MUXNEG_GND_Val;	     // Selection for the negative ADC input
 	ADC->INPUTCTRL.bit.GAIN = ADC_INPUTCTRL_GAIN_DIV2_Val;			 // Set gain to 0.5x
   
-	//ADC->CTRLB.bit.CORREN		//gain and offset correction enabled (slower)
+	//ADC->CTRLB.bit.CORREN = 1;										//gain and offset correction enabled (slower)
 	ADC->CTRLB.bit.DIFFMODE = 0;									//Single ended mode (muxneg ignored)
 	
 	// Control A
@@ -82,13 +84,13 @@ adc->SWTRIG.bit.START = 1;
 	syncADC();
 	ADC->CTRLA.bit.ENABLE = 0x01;                 // Enable ADC
 	
-	ADC->CTRLB.reg =	ADC_CTRLB_PRESCALER_DIV64 | 	//Divide clock by 64
+	ADC->CTRLB.reg =	ADC_CTRLB_PRESCALER_DIV64 | 	//Divide clock by 64 = 750kHz
 						ADC_CTRLB_RESSEL_12BIT;			//12-bit resolution (8-12 avail)
 	
 	ADC->AVGCTRL.reg =	ADC_AVGCTRL_SAMPLENUM_1	|		//Average x samples
 						ADC_AVGCTRL_ADJRES(0x00);		//
 	
-	ADC->SAMPCTRL.reg = 0x03;							//Sample time
+	ADC->SAMPCTRL.reg = 0x02;							//Sample time
 	
 	syncADC();				//Wait for sync
 	
@@ -110,7 +112,6 @@ uint32_t ADC_Peripheral::read_blocking(adcPortMap pin)
 {
 	uint32_t valueRead = 0;
 
-	
 #if defined(__SAMD51__)
 	Adc *adc;
 	if (g_APinDescription[pin].ulPinAttribute & PIN_ATTR_ANALOG) adc = ADC0;
@@ -155,25 +156,25 @@ adc->SWTRIG.bit.START = 1;
 	while(adc->SYNCBUSY.reg & ADC_SYNCBUSY_ENABLE);   //wait for sync
   
 #else
-	syncADC();
-	
+
 	ADC->INPUTCTRL.bit.MUXPOS = static_cast<uint32_t>(pin);		//select ADC channel (AIN0 -> AINxx)
+	ADC->INTFLAG.bit.RESRDY = 1;				//Clear flag
+	syncADC();
 	
 	// Start conversion
-	ADC->SWTRIG.bit.START = 1;
-
+	ADC->SWTRIG.bit.START = 1;					//
 	while(ADC->INTFLAG.bit.RESRDY == 0);		// Waiting for conversion to complete
-	ADC->INTFLAG.reg = ADC_INTFLAG_RESRDY;		//necessary?
 	syncADC();
-	
 	valueRead = ADC->RESULT.reg;				// Store the value
+	
+	ADC->SWTRIG.reg = 0x01;		//test
 #endif
 
 	return valueRead;
 }
 
 #if defined(NZ_STEPPER_REV1) || defined(NZ_STEPPER_REV2) || defined(NZ_STEPPER_5995) || defined(NEMA17_SMART_STEPPER_3_21_2017)
-float ADC_Peripheral::GetMotorVoltage()
+float ADC_Peripheral::getMotorVoltage()
 {
 	uint32_t x;
 	float f;
@@ -184,19 +185,21 @@ float ADC_Peripheral::GetMotorVoltage()
 }
 
 //Read temperature near motor chip
-//not verified calculations
+//will lag compared to junction temp
 //10k resistor + 10k NTC
-int32_t ADC_Peripheral::getTemperature()
+float ADC_Peripheral::getTemperature()
 {
-	float ntc;
-	const float invBeta = 1.00 / 3380.00; 		// Thermistor Beta
-	const float invT0 = 1.00 / 298.15; 		    // room temp in Kelvin
-
-	int adcVal = read_blocking(adcPortMap::_PB03);
-	ntc = 1.00 / (invT0 + invBeta*(log(ADC_MAX_F / (float) adcVal - 1.00)));
-	ntc = ntc - 273.15;                        // convert to Celsius
-	ntc = constrain(ntc, 0, 200);		//limit reading 0 - 200 C
+	float ntc, vratio;
+	const float invBeta = 1.00 / 3380.00; 					// Thermistor Beta
+	const float invT0 = 1.00 / (273.15 + 25.0); 		    // room temp in Kelvin
 	
-	return (int32_t)ntc;
+	int adcVal = read_blocking(adcPortMap::_PB03);
+	
+	vratio = (float)adcVal / ADC_MAX_F;
+	ntc = 1.00 / (invT0 + invBeta * (log( 1/(1/vratio - 1)  ))); 		//Log(R/R0)
+	ntc -= 273.15;								//convert to Celsius
+	ntc = constrain(ntc, 0, 200);				//limit reading 0 - 200 C
+	
+	return ntc;
 }
 #endif

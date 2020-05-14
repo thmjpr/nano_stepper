@@ -21,6 +21,7 @@
 #include "syslog.h"
 #include "board.h"
 #include "stepper_controller.h"
+#include "adc_analog.h"
 
 #include "Adafruit_GFX.h"
 #include "Adafruit_SSD1306.h"
@@ -52,6 +53,7 @@ class LCD
 		bool displayEnabled;			//Is display active/responding
 		Adafruit_SSD1306 display;
 		StepperCtrl *ptrStepperCtrl;
+		ADC_Peripheral *ptrADC;
 		menuItem_t *ptrMenu;
 		int32_t menuIndex;
 		bool menuActive;
@@ -69,11 +71,13 @@ class LCD
 		bool displayEn() const { return displayEnabled; }
 		void forceMenuActive(void);
 		void setMenu(menuItem_t *pMenu);
-		void begin(StepperCtrl *ptrStepperCtrl);	//sets up the LCD
+		void begin(StepperCtrl *ptrStepperCtrl, ADC_Peripheral *ptrADC);	//sets up the LCD
 		void showSplash(void);
 		void process(void);							//determine what to display
 		void lcdShow(const char *line1, const char *line2,const char *line3);
-		void showCalibration(int current_step);
+		void showCalibration(int current_step);		//
+		void showStepSize(float step);				//
+		void showInfo(void);						//Show various config info?
 };
 
 
