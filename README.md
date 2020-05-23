@@ -3,7 +3,7 @@ This is a modication of the nano zero stepper.
 
 Hardware changes
 
-REV 1:
+Rev 1:
 - Board re-layout
 - Connectors optimized for simplicity/cost
 - Input protection added (fuse and TVS)
@@ -11,16 +11,35 @@ REV 1:
 - Inputs are over/under voltage protected (high = 2~24V). No external supply connection needed (w/ level shifter). Tested to 90kHz step speed, limited by firmware. Not opto.
 - Error out open collector
 
-REV 2:
+Rev 2:
 - Add motor voltage monitor analog input (0 to 33V range)
 - Add NTC resistor to measure motor driver temperature
 - Remove JTAG header
 - Adjust switch footprint
 
+Rev 3:
+- Change motor driver to A4950
+- Change micro to SAMD51G18A
+- Nema17/23 layouts
+- Remove unused parts
 
 # Photos
+
+Rev2:
+![2020-05-23 12 21 34](https://user-images.githubusercontent.com/3468997/82738950-86732a80-9cf0-11ea-8bb7-f8b7b6d01363.jpg)
+![2020-05-23 12 21 56](https://user-images.githubusercontent.com/3468997/82738952-86732a80-9cf0-11ea-84fa-fa7e4cc9ac3b.jpg)
+
+
+Rev1:
 ![board](https://user-images.githubusercontent.com/3468997/34456704-38d03188-ed52-11e7-9c1e-ecdd5b01cb7f.jpg)
 ![board2](https://user-images.githubusercontent.com/3468997/34456705-3de08fe2-ed52-11e7-836f-439ced3b7447.jpg)
+
+
+
+
+
+
+Original project:
 
 # Smart Stepper (also known as the nano zero stepper)
 Firmware to turn a stepper motor into servo motor: see http://misfittech.net for hardware! 
