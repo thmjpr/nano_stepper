@@ -12,6 +12,9 @@
 #include "Flash.h"
 #include "syslog.h"
 
+//SAMD51 has ECC feature?
+//Power reduction mode can be disabled? (CTRLA.PRM)
+
 bool flashInit(void)
 {
 	if (NVMCTRL->PARAM.bit.PSZ != 3)
@@ -28,14 +31,26 @@ bool flashInit(void)
 static void erase(const volatile void *flash_ptr)
 {
 	NVMCTRL->ADDR.reg = ((uint32_t)flash_ptr) / 2;
+	
+#ifdef _SAMD21_
 	NVMCTRL->CTRLA.reg = NVMCTRL_CTRLA_CMDEX_KEY | NVMCTRL_CTRLA_CMD_ER;		//ER = erase row
+#else	//SAMD51
+	NVMCTRL->CTRLB.reg = NVMCTRL_CTRLB_CMDEX_KEY | NVMCTRL_CTRLB_CMD_EB; 		//EB = erase block, EP = erase page
+	//Each region has dedicated lock bit preventing writing and erasing pages in the region
+#endif // !
+	
 	flashWaitForReady();
 }
 
 void flashWaitForReady(void)
 {
 	int i = 0;
+	
+#ifdef _SAMD21_
 	while (!NVMCTRL->INTFLAG.bit.READY) 
+#else
+	while(!NVMCTRL->STATUS.bit.READY)
+#endif
 	{
 		i++;
 	}
@@ -156,11 +171,13 @@ void flashWritePage(const volatile void *flash_ptr, const void *data, uint32_t s
 		return;
 	}
 
+	
+#ifdef _SAMD21_
 	// Disable automatic page write
 	NVMCTRL->CTRLB.bit.MANW = 1;
-
+	
 	// Do writes in pages
-	while (size)
+while(size)
 	{
 		// Execute "PBC" Page Buffer Clear
 		NVMCTRL->CTRLA.reg = NVMCTRL_CTRLA_CMDEX_KEY | NVMCTRL_CTRLA_CMD_PBC;
@@ -169,15 +186,44 @@ void flashWritePage(const volatile void *flash_ptr, const void *data, uint32_t s
 		// Fill page buffer
 		uint32_t i;
 		for (i = 0; i < (FLASH_PAGE_SIZE / 4) && size; i++) //we write 4 bytes at a time
-		{
-			*dst_addr = read_unaligned_uint32(src_addr);
-			src_addr += 4;
-			dst_addr++;
-			size--; //size is set to number of 32bit words in first line above
-		}
+			{
+				*dst_addr = read_unaligned_uint32(src_addr);
+				src_addr += 4;
+				dst_addr++;
+				size--;  //size is set to number of 32bit words in first line above
+			}
 
 		// Execute "WP" Write Page
 		NVMCTRL->CTRLA.reg = NVMCTRL_CTRLA_CMDEX_KEY | NVMCTRL_CTRLA_CMD_WP;
 		flashWaitForReady();
 	}
+	
+#else	//SAMD51
+	
+	//Configure manual write mode for NVM using WMODE
+	NVMCTRL->CTRLA.bit.WMODE = NVMCTRL_CTRLA_WMODE_MAN_Val;	//
+	flashWaitForReady();			//Make sure NVM ready to accept a new command
+			
+// Do writes in pages
+while(size)
+	{
+		NVMCTRL->CTRLB.reg = NVMCTRL_CTRLB_CMDEX_KEY | NVMCTRL_CTRLB_CMD_PBC;	//Clear page buffer
+		flashWaitForReady();
+		NVMCTRL->INTFLAG.bit.DONE = 1; 		//Clear the done flag
+	
+		// Fill page buffer
+		uint32_t i;
+		for (i = 0; i < (FLASH_PAGE_SIZE / 4) && size; i++) //we write 4 bytes at a time
+			{
+				*dst_addr = read_unaligned_uint32(src_addr);
+				src_addr += 4;
+				dst_addr++;
+				size--;   //size is set to number of 32bit words in first line above
+			}
+
+		NVMCTRL->CTRLB.reg = NVMCTRL_CTRLB_CMDEX_KEY | NVMCTRL_CTRLB_CMD_WP;	// Execute "WP" Write Page
+		flashWaitForReady();
+		NVMCTRL->INTFLAG.bit.DONE = 1;  		//Clear the done flag
+	}
+#endif // !_SAMD21
 }

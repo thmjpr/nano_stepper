@@ -62,10 +62,10 @@ boolean AS5047D::begin(int csPin)
 	digitalWrite(PIN_AS5047D_PWR, HIGH);
 #endif
 	digitalWrite(PIN_AS5047D_CS, LOW); //pull CS LOW by default (chip powered off)
-	digitalWrite(PIN_MOSI, LOW);
-	digitalWrite(PIN_SCK, LOW);
-	digitalWrite(PIN_MISO, LOW);
-	pinMode(PIN_MISO, OUTPUT);
+	digitalWrite(PIN_SPI_MOSI, LOW);
+	digitalWrite(PIN_SPI_SCK, LOW);
+	digitalWrite(PIN_SPI_MISO, LOW);
+	pinMode(PIN_SPI_MISO, OUTPUT);
 	delay(500);
 
 	digitalWrite(PIN_AS5047D_CS, HIGH); //pull CS high
@@ -73,7 +73,7 @@ boolean AS5047D::begin(int csPin)
 	digitalWrite(PIN_AS5047D_PWR, LOW);
 #endif
 
-	pinMode(PIN_MISO, INPUT);
+	pinMode(PIN_SPI_MISO, INPUT);
 
 	error = false;
 	SPISettings settingsA(10000000, MSBFIRST, SPI_MODE1); ///400000, MSBFIRST, SPI_MODE1);	//***FFF test 10MHz*/
@@ -199,8 +199,6 @@ int16_t AS5047D::readEncoderAnglePipeLineRead(void)
 	int t0 = 10;
 	
 	GPIO_LOW(chipSelectPin);
-	
-	delayMicroseconds(1);	//??
 
 	do
 	{
@@ -234,11 +232,11 @@ void AS5047D::diagnostics(char *ptrStr)
 		if (NULL == ptrStr)
 		{
 			LOG("DIAAGC: 0x%04X", data);
-			LOG("MAGL: %d", getBit(data, 11));
-			LOG("MAGH: %d", getBit(data, 10));
+			LOG("MAGL: %d", getBit(data, 11));		//Mag strength too low
+			LOG("MAGH: %d", getBit(data, 10));		//Mag strength too high
 			LOG("COF: %d", getBit(data, 9));
 			LOG("LFGL: %d", getBit(data, 8));
-			LOG("AGC: %d", data & 0x0FF);
+			LOG("AGC: %d", data & 0x0FF);			//automatic gain value
 
 			data = readAddress(AS5047D_CMD_MAG);
 			LOG("CMAG: 0x%04X(%d)", data, data);

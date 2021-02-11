@@ -115,13 +115,16 @@ class StepperCtrl
 		volatile int64_t velocity;
 
 		int64_t zeroAngleOffset = 0;
+		uint32_t backlashSteps = 0;
 
 		//does linear interpolation of the encoder calibration table
 		int32_t getAngleCalibration(int32_t encoderAngle);
 
 		//updates the currentMeasuredAngle with our best guess where we are
 		Angle sampleAngle(void);
+		Angle sampleMeanPipeline(void);
 		Angle sampleMeanEncoder(int32_t numSamples);
+
 
 		float measureStepSize(void); //steps motor and estimates step size
 		uint32_t measureMaxCalibrationError(void);
@@ -161,6 +164,7 @@ class StepperCtrl
 
 		void moveToAbsAngle(int32_t a);
 		void moveToAngle(int32_t a, uint32_t ma);
+		void holdAngle(uint32_t ma);
 
 		stepCtrlError begin(LCD * lcd_d = nullptr); 	//returns false if we can not use motor
 
@@ -172,7 +176,7 @@ class StepperCtrl
 		bool processFeedback(void);					// does the feedback loop
 		void feedback(bool enable);
 		bool getFeedback(void) {return enableFeedback;}
-
+	
 		void encoderDiagnostics(char *ptrStr);
 		int32_t measureError(void);
 
@@ -182,12 +186,14 @@ class StepperCtrl
 
 		void move(int dir, uint16_t steps); //forces motor to move even if feedback controller is turned off.
 		void enable(bool enable);
+		void sleep(bool sleep);
 		bool getEnable(void) {return enabled;}
 
 		int32_t getLoopTime(void) { return loopTimeus;}
 
 		void PID_Autotune(void);
 		void setZero(void);
+		void setBacklashSteps(uint32_t backlash);		//
 };
 
 #endif //__STEPPER_CONTROLLER_H__

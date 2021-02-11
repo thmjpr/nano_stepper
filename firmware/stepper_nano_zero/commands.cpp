@@ -162,7 +162,7 @@ static int getsteps_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 {
 	int32_t s;
 	
-	s = (int32_t)getSteps();
+	s = getSteps();
 	CommandPrintf(ptrUart, "steps %" PRIi32 "\n\r", s);
 	
 	return 0;
@@ -1220,7 +1220,6 @@ static int step_cmd(sCmdUart *ptrUart, int argc, char *argv[])
 	if (argc == 0)
 	{
 		stepperCtrl.move(0, 1);
-		//stepperCtrl.step(STEPPER_FORWARD);
 	}
 	else
 	{
@@ -1342,18 +1341,18 @@ uint8_t putch(char data)
 
 uint8_t kbhit_hw(void)
 {
-	return Serial5.available();
+	return Serial232.available();
 	//return SerialUSB.peek() != -1;
 }
 
 uint8_t getChar_hw(void)
 {
-	return Serial5.read();
+	return Serial232.read();
 }
 
 uint8_t putch_hw(char data)
 {
-	return Serial5.write((uint8_t)data);
+	return Serial232.write((uint8_t)data);
 }
 
 uint8_t kbhit_step_dir(void)

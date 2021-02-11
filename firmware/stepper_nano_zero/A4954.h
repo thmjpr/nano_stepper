@@ -18,6 +18,7 @@
 
 #define A4954_NUM_MICROSTEPS (256)
 #define A4954_MIN_TIME_BETWEEN_STEPS_MICROS  (1000)
+#define A4954_MAX_CURRENT       (2000)
 
 //prevent someone for making a mistake with the code
 #if ((A4954_NUM_MICROSTEPS*4) != SINE_STEPS)
@@ -51,6 +52,7 @@ private:
 public:
 	void begin(void);
 	int32_t move(int32_t stepAngle, uint32_t mA);                               //moves motor where the modulo of A4954_NUM_MICROSTEPS is a full step.
+	int32_t hold(uint32_t mA);                                                  //does mA/vref matter?
 	uint32_t microsSinceStep(void) { return micros() - lastStepMicros; };       //
 	void setRotationDirection(bool forward) { forwardRotation = forward; };     //
 	void enable(bool enable);                                                   //Setup pins to A4954

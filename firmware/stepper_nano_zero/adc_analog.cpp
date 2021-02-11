@@ -17,47 +17,65 @@
 
 #define ADC_MAX_F 4095.0		//12-bit ADC
 #define V_SUPPLY  3.33			//3.33V supply
-
 #define ADC_GAIN  0.50			//gain is half
 
 
 void ADC_Peripheral::begin()
 {
-	
 #if defined(__SAMD51__)
-	Adc *adc;
-	if (g_APinDescription[pin].ulPinAttribute & PIN_ATTR_ANALOG) adc = ADC0;
-	else if (g_APinDescription[pin].ulPinAttribute & PIN_ATTR_ANALOG_ALT) adc = ADC1;
-	else return 0;
+	#define NUM_ADCS 2
 
-	while (adc->SYNCBUSY.reg & ADC_SYNCBUSY_INPUTCTRL) ; //wait for sync
-	adc->INPUTCTRL.bit.MUXPOS = g_APinDescription[pin].ulADCChannelNumber;     // Selection for the positive ADC input
-  
-	// Control A
-	/*
-	 * Bit 1 ENABLE: Enable
-	 *   0: The ADC is disabled.
-	 *   1: The ADC is enabled.
-	 * Due to synchronization, there is a delay from writing CTRLA.ENABLE until the peripheral is enabled/disabled. The
-	 * value written to CTRL.ENABLE will read back immediately and the Synchronization Busy bit in the Status register
-	 * (STATUS.SYNCBUSY) will be set. STATUS.SYNCBUSY will be cleared when the operation is complete.
-	 *
-	 * Before enabling the ADC, the asynchronous clock source must be selected and enabled, and the ADC reference must be
-	 * configured. The first conversion after the reference is changed must not be used.
-	 */
-while(adc->SYNCBUSY.reg & ADC_SYNCBUSY_ENABLE);     //wait for sync
-adc->CTRLA.bit.ENABLE = 0x01;                 // Enable ADC
+	//Setup ADC0 and ADC1
+	for(int i = 0 ; i < NUM_ADCS ; i++)
+	{
+		Adc *adc;
+		if (i == 0) adc = ADC0;
+		else if (i==1) adc = ADC1;
+		else return;
 
-// Start conversion
-while(adc->SYNCBUSY.reg & ADC_SYNCBUSY_ENABLE);     //wait for sync
-  
-adc->SWTRIG.bit.START = 1;
-
-	// Clear the Data Ready flag
-	//adc->INTFLAG.reg = ADC_INTFLAG_RESRDY;  
+		//Can use VREF SEL to select 1V to 2.5V values
+		adc->REFCTRL.bit.REFSEL = ADC_REFCTRL_REFSEL_INTVCC1_Val; 		//Ref = VddANA
 	
-	//Wait for conversion to complete
-	while(ADC->INTFLAG.bit.RESRDY == 0) {}
+		adc->INPUTCTRL.bit.MUXPOS = ADC_INPUTCTRL_MUXNEG_AIN0_Val; 		 // Selection for the positive ADC input
+		adc->INPUTCTRL.bit.MUXNEG = ADC_INPUTCTRL_MUXNEG_GND_Val; 	     // Selection for the negative ADC input
+		//adc->CTRLB.bit.CORREN = 1;										//gain and offset correction enabled (slower)
+		//adc->CTRLA.bit.R2R =	//only set R2R in differential mode
+  
+		adc->CTRLA.bit.ENABLE = 0x01;									// Enable ADC
+		adc->CTRLA.bit.PRESCALER = ADC_CTRLA_PRESCALER_DIV64_Val;		//Divide clock by 64 = 750kHz
+	
+		adc->CTRLB.bit.RESSEL =	ADC_CTRLB_RESSEL_12BIT_Val; 			//12-bit resolution (8-12 avail)
+	
+		adc->AVGCTRL.reg =	ADC_AVGCTRL_SAMPLENUM_1	| 		//Average x samples
+							ADC_AVGCTRL_ADJRES(0x00); 		//
+	
+		adc->SAMPCTRL.reg = 0x02; 							//Sample time
+		syncADC(adc);					//test
+		
+		adc->SWTRIG.bit.START = 1;
+	
+		//Wait for conversion to complete
+		while(adc->INTFLAG.bit.RESRDY == 0) {}
+		
+	/*
+	//Does ADC clock need to be setup????
+	MCLK->APBDMASK.bit.ADC0_ = true;		//
+	MCLK->APBDMASK.bit.ADC1_ = true; 		//
+		
+	//9
+	GCLK->GENCTRL[9].bit.DIV = 1; 				//Divider = 1
+	GCLK->GENCTRL[9].bit.IDC = true; 			//Improve duty cycle (?)
+	GCLK->GENCTRL[9].bit.GENEN = true;  		//Enable
+	GCLK->GENCTRL[9].bit.SRC = GCLK_GENCTRL_SRC_DFLL;   	//Select 48MHz source (?)
+	while(GCLK->SYNCBUSY.bit.GENCTRL9); 			//Wait for synchronization
+	
+	GCLK->PCHCTRL[40].bit.CHEN = true;  						//Enable peripheral channel (40 = ADC0)
+	GCLK->PCHCTRL[40].bit.GEN = GCLK_PCHCTRL_GEN_GCLK9_Val;  	//Set GCLK channel to x
+
+	GCLK->PCHCTRL[41].bit.CHEN = true;   						//Enable peripheral channel (41 = ADC1)
+	GCLK->PCHCTRL[41].bit.GEN = GCLK_PCHCTRL_GEN_GCLK9_Val;   	//Set GCLK channel to x
+	*/
+	}
 #else
 	syncADC();
 	ADC->REFCTRL.bit.REFSEL = ADC_REFCTRL_REFSEL_INTVCC1_Val;		//Ref = 1/2 Vdda
@@ -106,20 +124,30 @@ adc->SWTRIG.bit.START = 1;
 
 }
 
+#ifdef _SAMD51_
+uint32_t ADC_Peripheral::read_blocking(adc0PortMap pin)
+{
+	return 0;
+}
 
+uint32_t ADC_Peripheral::read_blocking(adc1PortMap pin)
+	
+#else
 //Returns x-bit ADC value from selected ADC pin
-uint32_t ADC_Peripheral::read_blocking(adcPortMap pin)
+uint32_t ADC_Peripheral::read_blocking(adcPortMap pin)		//need to pass somehow..
+#endif // 
 {
 	uint32_t valueRead = 0;
 
 #if defined(__SAMD51__)
 	Adc *adc;
-	if (g_APinDescription[pin].ulPinAttribute & PIN_ATTR_ANALOG) adc = ADC0;
-	else if (g_APinDescription[pin].ulPinAttribute & PIN_ATTR_ANALOG_ALT) adc = ADC1;
-	else return 0;
+	adc = ADC0;
+	//if (g_APinDescription[pin].ulPinAttribute & PIN_ATTR_ANALOG) adc = ADC0;
+	//else if (g_APinDescription[pin].ulPinAttribute & PIN_ATTR_ANALOG_ALT) adc = ADC1;
+	//else return 0;
 
 	while (adc->SYNCBUSY.reg & ADC_SYNCBUSY_INPUTCTRL) ; //wait for sync
-	adc->INPUTCTRL.bit.MUXPOS = g_APinDescription[pin].ulADCChannelNumber;   // Selection for the positive ADC input
+	//adc->INPUTCTRL.bit.MUXPOS = g_APinDescription[pin].ulADCChannelNumber;   // Selection for the positive ADC input
   
 	// Control A
 	/*
@@ -133,30 +161,19 @@ uint32_t ADC_Peripheral::read_blocking(adcPortMap pin)
 	 * Before enabling the ADC, the asynchronous clock source must be selected and enabled, and the ADC reference must be
 	 * configured. The first conversion after the reference is changed must not be used.
 	 */
-while(adc->SYNCBUSY.reg & ADC_SYNCBUSY_ENABLE);   //wait for sync
-adc->CTRLA.bit.ENABLE = 0x01;               // Enable ADC
-
-// Start conversion
-while(adc->SYNCBUSY.reg & ADC_SYNCBUSY_ENABLE);   //wait for sync
-  
-adc->SWTRIG.bit.START = 1;
-
-	// Clear the Data Ready flag
-	adc->INTFLAG.reg = ADC_INTFLAG_RESRDY;
-
-	// Start conversion again, since The first conversion after the reference is changed must not be used.
-	adc->SWTRIG.bit.START = 1;
-
-	// Store the value
-	while(adc->INTFLAG.bit.RESRDY == 0);     // Waiting for conversion to complete
-	valueRead = adc->RESULT.reg;
-
-	while (adc->SYNCBUSY.reg & ADC_SYNCBUSY_ENABLE) ; //wait for sync
-	adc->CTRLA.bit.ENABLE = 0x00;               // Disable ADC
 	while(adc->SYNCBUSY.reg & ADC_SYNCBUSY_ENABLE);   //wait for sync
-  
-#else
+	adc->CTRLA.bit.ENABLE = 0x01;               // Enable ADC
 
+	// Start conversion
+	while(adc->SYNCBUSY.reg & ADC_SYNCBUSY_ENABLE);   //wait for sync
+	
+	adc->SWTRIG.bit.START = 1;				//Start conversion
+	while(adc->INTFLAG.bit.RESRDY == 0);    //Waiting for conversion to complete
+	valueRead = adc->RESULT.reg;			//Store result
+
+#else
+	//adc->INPUTCTRL.bit.MUXPOS = g_APinDescription[pin].ulADCChannelNumber;    // Selection for the positive ADC input
+	
 	ADC->INPUTCTRL.bit.MUXPOS = static_cast<uint32_t>(pin);		//select ADC channel (AIN0 -> AINxx)
 	ADC->INTFLAG.bit.RESRDY = 1;				//Clear flag
 	syncADC();
@@ -173,13 +190,17 @@ adc->SWTRIG.bit.START = 1;
 	return valueRead;
 }
 
-#if defined(NZ_STEPPER_REV1) || defined(NZ_STEPPER_REV2) || defined(NZ_STEPPER_5995) || defined(NEMA17_SMART_STEPPER_3_21_2017)
+#if defined(NZ_STEPPER_REV1) || defined(NZ_STEPPER_REV2) || defined(NZ_STEPPER_REV3) || defined(NZ_STEPPER_NEMA23) || defined(NEMA17_SMART_STEPPER_3_21_2017)
 float ADC_Peripheral::getMotorVoltage()
 {
 	uint32_t x;
 	float f;
 
+#ifdef _SAMD21_
 	x = read_blocking(adcPortMap::_PA04);						//Vmotor tap
+#else	//SAMD51
+	
+#endif	
 	f = (float)x * V_SUPPLY / ADC_MAX_F * ((10.0 + 1.0) / 1);  //10k/1k resistor divider
 	return f;
 }

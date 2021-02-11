@@ -22,13 +22,7 @@
 
 void LCD::begin(StepperCtrl *ptrsCtrl, ADC_Peripheral *ptrsADC)
 {
-#ifndef MECHADUINO_HARDWARE
-	pinMode(PIN_SW1, INPUT_PULLUP);
-	pinMode(PIN_SW2, INPUT_PULLUP);
-	pinMode(PIN_SW3, INPUT_PULLUP);
-#endif
 	buttonState = 0;
-
 	ptrStepperCtrl = ptrsCtrl;		//pointer to the stepper controller
 	ptrADC = ptrsADC;				//pointer to ADC
 
@@ -57,6 +51,12 @@ void LCD::begin(StepperCtrl *ptrsCtrl, ADC_Peripheral *ptrsADC)
 
 	if (displayEnabled)
 	{
+#ifdef __SAMD51__
+		// Assign pins SERCOM functionality
+		pinPeripheral(PIN_SDA, PIO_SERCOM); 		//sercom3 on main, 5 on ALT
+		pinPeripheral(PIN_SCL, PIO_SERCOM); 
+#endif // __SAMD51__
+		
 		displayEnabled = display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
 	}
 	else
@@ -217,9 +217,9 @@ void __attribute__ ((optimize("Ofast"))) LCD::updateMenu(void)
 				char *ptrArgV[1];
 				char str[25] = {0};
 				ptrArgV[0] = str;
-				sprintf(str,"%d",optionIndex);
+				sprintf(str, "%d", optionIndex);
 				LOG("Calling function for %s %s", ptrMenu[menuIndex].str, str);
-				ptrMenu[menuIndex].func(1,ptrArgV);
+				ptrMenu[menuIndex].func(1, ptrArgV);
 				ptrOptions = NULL;
 				optionIndex = 0;
 			}else
@@ -424,11 +424,22 @@ void LCD::showStatus()
 				display.setCursor(70, 52);
 				display.println(buf);
 				
-				//power meter?
-				char buf1[] = { 218, 218, 218, 0x5F, 0x5F, 0x00 };
-				display.setCursor(70, 40);
-				display.println(buf1);
+				//power meter? does motor voltage matter here?
+				int power = 0;
+				char pwr_meter[] = { 0x5F, 0x5F, 0x5F, 0x5F, 0x5F, 0x5F, 0x00 };
 				
+				for (int i = 0; i < 6; i++)
+				{
+					if(power > (i * A4954_MAX_CURRENT / 5))
+						pwr_meter[i] = 0xDA;	//fill in block on display
+					else
+						pwr_meter[i] = 0x5F;
+				}
+				
+				display.setCursor(70, 40);
+				display.println(pwr_meter);
+				
+				//ptrStepperCtrl->getCurrentAmps
 				//Er En, !Er !En maybe?
 				
 		
@@ -506,12 +517,14 @@ void LCD::showStepSize(float step)
 }
 
 //screen to show all the info in smaller font: motor current, control mode, etc.? maybe show on startup?
-void LCD::showInfo()
+void LCD::showInfo(const int32_t motorCurrent, const int32_t microstep)
 {
 	char buf[30];
 	
 	uint8_t temp, volt;
 	char str[3][20];
+	
+	display.clearDisplay();
 	
 	//Control mode
 	display.setTextSize(1);
@@ -520,22 +533,22 @@ void LCD::showInfo()
 	switch (ptrStepperCtrl->getControlMode())
 	{
 	case feedbackCtrl::SIMPLE:
-		sprintf(buf, "control: simple");
+		sprintf(buf, "Control: simple");
 		break;
 
 	case feedbackCtrl::POS_PID:
-		sprintf(buf, "control: pos PID");
+		sprintf(buf, "Control: pos PID");
 		break;
 
 	case feedbackCtrl::POS_VELOCITY_PID:
-		sprintf(buf, "control: velo PID");
+		sprintf(buf, "Control: velo PID");
 		break;
 
 	case feedbackCtrl::OPEN:
-		sprintf(buf, "control: open");
+		sprintf(buf, "Control: open");
 		break;
 	case feedbackCtrl::OFF:
-		sprintf(buf, "control: off");
+		sprintf(buf, "Control: off");
 		break;
 	default:
 		display.setCursor(80, 52);
@@ -544,8 +557,22 @@ void LCD::showInfo()
 	}
 	display.println(buf);
 	
+	//Motor current
+	display.setCursor(0, 13);
+	sprintf(buf, "Current: %umA", motorCurrent);
+	display.println(buf);
 	
+	//Steps
+	display.setCursor(0, 26);
+	sprintf(buf, "Steps: 1/%u", microstep);
+	display.println(buf);
+
 	
+	display.setCursor(0, 39);
+	sprintf(buf, "Test: ");
+	display.println(buf);
+	
+	display.display();  		//send buffer to display
 }
 
 

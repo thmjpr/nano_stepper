@@ -30,7 +30,7 @@ typedef struct {
 	int32_t currentHoldMa; 			//hold current for the motor
 	int32_t homeMa; 				//maximum current when error homing
 	int32_t homeHoldMa; 			//hold current when error homing
-	int32_t fullStepsPerRotation; //how many full steps per rotation is the motor
+	int32_t fullStepsPerRotation;	//how many full steps per rotation is the motor
 	bool motorWiring;   			//forward wiring of motor or reverse
 	bool parametersValid;
 } MotorParams_t;
@@ -42,8 +42,10 @@ typedef struct {
 	ErrorPinMode errorPinMode;  	//error output active high or low
 	EnablePinMode enablePinMode;    //enable input active high or low
 	feedbackCtrl controllerMode;    //feedback mode for the controller
+	int32_t autoSleepSeconds;		//seconds until entering very low/no current mode
 	int32_t homePin; 				//if greater than zero this is the pin we use trigger home current settings
 	int32_t homeAngleDelay;  		//the angle to delay before switching to lower homing current
+	int16_t backlashDegrees;		//The number of degrees to adjust on direction change to compensate for backlash
 	bool errorLogic; 				//if high and error will be high on output pin
 	bool enableLogic;				//if input high, enabled
 	bool parametersValid;

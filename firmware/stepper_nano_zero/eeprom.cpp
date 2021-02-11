@@ -260,7 +260,10 @@ eepromError_t eepromFlush(void) //flush the cache to flash memory
 
    // printEEPROM(NextPageWrite);
 
-   if (!SYSCTRL->PCLKSR.bit.BOD33DET) //if not in brown out condition find next write location
+#ifdef _SAMD21_
+	if(!SYSCTRL->PCLKSR.bit.BOD33DET) //if not in brown out condition find next write location
+#else    if(SUPC->INTFLAG.bit.BOD33DET)  //**FFF??*/
+#endif
    {
       //LOG("getting next page to write");
       NextPageWrite = eepromGetNextWritPage(); //find next write location and erase if needed

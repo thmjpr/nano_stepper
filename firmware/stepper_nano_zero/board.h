@@ -18,8 +18,9 @@
 //- Jlink - turn off "flash caching " in JLINK settings
 
 //Board type used
-#define NZ_STEPPER_REV2
-//#define MECHADUINO_HARDWARE	//uncomment this if you are using the Mechaduino hardware
+#define NZ_STEPPER_REV2		//ATSAMD21G
+//#define NZ_STEPPER_REV3		//ATSAMD51G version
+//#define NEMA17_SMART_STEPPER_3_21_2017		//
 //#define NEMA_23_10A_HW 		//uncomment the follow lines if using the NEMA 23 10A hardware
 #define DEBUG 1
 
@@ -28,7 +29,7 @@
 #define NZS_FAST_CAL			//define this to use 32k of flash for fast calibration table
 #define NZS_FAST_SINE			//uses 2048 extra bytes to implement faster sine tables
 #define NZS_AS5047_PIPELINE		//does a pipeline read of encoder, which is slightly faster 
-#define NZS_CONTROL_LOOP_HZ (5000)	//(6000) //update rate of control loop  **FF need to check what performance is affected
+#define NZS_CONTROL_LOOP_HZ (1000)	//(6000) //update rate of control loop  **FF need to check what performance is affected
 
 #define NZS_LCD_ABSOLUTE_ANGLE  //define this to show angle from zero in positive and negative direction
 								// for example 2 rotations from start will be angle of 720 degrees
@@ -41,17 +42,18 @@
 
 //Define this to allow command out serial port, else hardware serial is debug log
 //#define CMD_SERIAL_PORT
-#define SERIAL_BAUD (115200)	//baud rate for the serial ports		//jlink max = 128k
+#define SERIAL_BAUD		(115200)	//baud rate for the serial ports		//jlink max = 128k
+#define SERIAL_BAUD_USB (921600)	//baud rate USB
 
 //This section is for using the step and dir pins as serial port
 // when the enable pin is inactive.
 //#define USE_STEP_DIR_SERIAL
 //#define STEP_DIR_BAUD (19200) //this is the baud rate we will use
 
-// These are used as an attempt to use TC4 to count steps
-//  currently this is not working.
+// These are used as an attempt to use TC4 to count steps //  currently this is not working.
 //#define USE_NEW_STEP //define this to use new step method
-#define USE_TC_STEP		//use timer counter for step pin
+#define USE_TC_STEP		true	//use timer counter for step pin
+#define USE_BACKLASH	true	//backlash compensation option
 
 #ifndef F_CPU
 	#define F_CPU (48000000UL)
@@ -153,6 +155,7 @@
 enum class RotationDir {
 	CW = 0,					//Clockwise
 	CCW = 1,				//
+	Unknown
 };
 
 enum class ErrorPinMode {
@@ -195,23 +198,9 @@ enum class feedbackCtrl {
 //TC4 is used for step count
 //TC5 is use for timing the control loop
 
-//mechaduio and Arduino Zero has defined serial ports differently than NZS
-#ifdef MECHADUINO_HARDWARE
-	#warning "Compiling source for Mechaduino NOT NZS"
-	#define DISABLE_LCD
-	#define Serial5 Serial 
-#else
-	#define SerialUSB Serial
-#endif 
 
-#define DEBUG_SERIAL_VIA_USB	false		//False if using Tx/Rx output for debug, True = use USB serial port
+#define DEBUG_SERIAL_VIA_USB	true		//False if using Tx/Rx output for debug, True = use USB serial port
 
-#define PIN_STEP_INPUT  (0)		//D0 = PA11
-#define PIN_DIR_INPUT   (1)		//D10 = PA10
-
-#define PIN_MOSI        (23)	//
-#define PIN_SCK         (24)	//
-#define PIN_MISO        (22)	//
 
 #ifdef MECHADUINO_HARDWARE
 	#define PIN_ERROR 		(19)  //analogInputToDigitalPin(PIN_A5))
@@ -241,43 +230,113 @@ enum class feedbackCtrl {
 	#define PIN_A5995_SLEEPn	(25) //RXLED
 	#define A5995_DRIVER
 
-#elif defined NZ_STEPPER_REV1	 //NZstepper hardware https://github.com/thmjpr/nano_stepper/tree/master/hardware
-	#define PIN_SW1 (19)		  //analogInputToDigitalPin(PIN_A5))
-	#define PIN_SW3 (14)		  //analogInputToDigitalPin(PIN_A0))
-	#define PIN_SW2 (15)		  //analogInputToDigitalPin(PIN_A1))
-	#define PIN_ERROR (10)
 
-	#define PIN_ENABLE (3)
-	#define PIN_VMOTOR PIN_B2 //Can try using PB02/AIN10/SWDclk as analog voltage input?			Could also change PA19 (D12) to be SW4 input
-	#define PIN_AS5047D_PWR	(11) //pull low to power on AS5047D
+//NZstepper hardware https://github.com/thmjpr/nano_stepper/tree/master/hardware
+
+#elif defined NZ_STEPPER_REV1	 //Rev1 - SAMD21
+
+	#define PIN_STEP_INPUT		(0)		//PA11
+	#define PIN_DIR_INPUT		(1)		//PA10
+	#define PIN_SW1				(19)		  
+	#define PIN_SW2				(15)		  
+	#define PIN_SW3				(14)		  
+	#define PIN_ERROR			(10)
+	#define PIN_ENABLE			(3)
+	#define PIN_VMOTOR PIN_B2		//Can try using PB02/AIN10/SWDclk as analog voltage input?			Could also change PA19 (D12) to be SW4 input
+	#define PIN_AS5047D_PWR		(11)	//pull low to power on AS5047D
 	#define A4954_DRIVER
 
-#elif defined NZ_STEPPER_REV2	  //REV2 hardware
-	#define PIN_SW1 (19)		  //A5 = PB02 = 19
-	#define PIN_SW3 (14)		  //A0 = PA02 = 14
-	#define PIN_SW2 (15)		  //A1 = PB08 = 15
-	#define PIN_TEMPERATURE (2)   //D2 = PA14 - NTC temperature near motor driver		//change to PB03 -> AIN[11]??
-	#define PIN_TEMPERATURE2 (25)//PB03
-	#define PIN_ERROR (3)		  //D3 = PA09
-	#define PIN_ENABLE (10)		  //D10 = PA18
-	#define PIN_VMOTOR (17)	      //A3 = PA04 = 17 - 10k/1k voltage divider from input voltage		//PA04 -> AIN[4]
-	#define PIN_AS5047D_PWR	(11)  //pull low to power on AS5047D
-	#define AS5047D_ENCODER	1		//Encoder type (P is same?)
-	#define A4954_DRIVER	1		//Driver type
+#elif defined NZ_STEPPER_REV2	  //Rev2 - SAMD21
 
-#elif defined NZ_STEPPER_5995		//
-	#define PIN_SW1 (19)
-	//these are the pins used on the A5995 driver
-	#define PIN_A5995_ENABLE 	() //A4 = PA05 = 
-	#define PIN_A5995_MODE	 	() //D7 = PA21 = 
-	#define PIN_A5995_PHASE1 	() //D12 = PA19 = 
-	#define PIN_A5995_PHASE2 	() //D6 = PA20 = 
-	#define PIN_A5995_VREF1		(4) //D4 = PA08
-	#define PIN_A5995_VREF2		(9) //D9 = PA07
-	//#define PIN_A5995_SLEEPn	//sleep pin tied high
-	#define PIN_AS5047D_PWR		(11) //pull low to power on AS5047D
-	#define A5995_DRIVER
+	#define PIN_MOSI        (23)	//PB10
+	#define PIN_SCK         (24)	//PB11
+	#define PIN_MISO        (22)	//PA12
+
+	#define PIN_SCL			(21)	//PA23 = I2C SCL (LCD)
+	#define PIN_SDA			(20)	//PA22 = I2C SDA (LCD)
+
+	#define PIN_SW1				(19)	//A5 = PB02 = 19
+	#define PIN_SW2				(15)	//A1 = PB08 = 15
+	#define PIN_SW3				(14)	//A0 = PA02 = 14
+
+	#define PIN_GREEN_LED  		(8)		//PA06
+	#define PIN_RED_LED			(13)	//PA17
+
+	#define PIN_A4954_IN1		(18)	//PA05
+	#define PIN_A4954_IN2		(7)		//PA21
+	#define PIN_A4954_IN3		(5)		//PA15
+	#define PIN_A4954_IN4		(6)		//PA20
+	#define PIN_A4954_VREF12	(9)		//PA07
+	#define PIN_A4954_VREF34	(4)		//PA08
+
+	#define PIN_STEP_INPUT		(0)		//PA11
+	#define PIN_DIR_INPUT		(1)		//PA10
+
+	#define PIN_USB_PWR			(38)	//this pin is high when usb is connected
+
+	#define PIN_TEMPERATURE		(2)		//D2 = PA14 - NTC temperature near motor driver		//change to PB03 -> AIN[11]??
+	#define PIN_TEMPERATURE2	(25)	//PB03
+	#define PIN_ERROR			(3)		//D3 = PA09
+	#define PIN_ENABLE			(10)	//D10 = PA18
+	#define PIN_VMOTOR			(17)	//A3 = PA04 = 17 - 10k/1k voltage divider from input voltage		//PA04 -> AIN[4]
 	
+	#define PIN_AS5047D_PWR		(11)	//pull low to power on AS5047D
+	#define PIN_AS5047D_CS		(16)	//
+	#define AS5047D_ENCODER	1			//Encoder type (P is same?)
+	#define A4954_DRIVER	1			//Driver type
+
+	#define Serial232		Serial5
+	#define SerialUSB		Serial		//Built in serial -> USB
+
+
+//Need better way to map pins... not using stock variant.cpp. this one is "itsybitsy m4"
+#elif defined NZ_STEPPER_REV3		//Rev3 SAMD51
+
+	//#define PIN_SPI_MOSI        (32)	//PB10
+	//#define PIN_SPI_SCK         (33)	//PB11
+	//#define PIN_SPI_MISO        (21)	//PA12
+
+	#define PIN_SCL			(12)	//PA23 = I2C SCL (LCD)
+	#define PIN_SDA			(13)	//PA22 = I2C SDA (LCD)
+	//PIN_WIRE_SDA
+
+	#define PIN_SW1			(6)			//PB02 = 19
+	#define PIN_SW2			(17)		//PB09 = 15
+	#define PIN_SW3			(16)		//PB08 = 14
+	#define PIN_TEMPERATURE (8)			//PB03 = AIN[11] NTC temperature near motor driver
+	#define PIN_ERROR		(35)		//PA09 = 
+	#define PIN_ENABLE		(5)			//PA15 =	//EIC_15_
+	#define PIN_VMOTOR		(18)	    //PA04 =  10k/1k voltage divider from input voltage		//PA04 -> AIN[4]
+	#define PIN_AS5047D_PWR	(4)			//PA14 =  pull low to power on AS5047D
+	#define AS5047D_ENCODER	1			//Encoder type (P is same?)
+	#define A4954_DRIVER	1			//Driver type, A4950 similar enough
+
+	#define PIN_STEP_INPUT  (37)			//PA11
+	#define PIN_DIR_INPUT   (36)			//PA10
+	
+	#define PIN_A4954_IN1	(0)		//PA16 = 
+	#define PIN_A4954_IN2	(1)		//PA17 = 
+	#define PIN_A4954_IN3	(7)		//PA18 = 
+	#define PIN_A4954_IN4	(9)		//PA19 = 
+	#define PIN_A4954_VREF34	(14)	//PA02 = DACO0
+	#define PIN_A4954_VREF12	(15)	//PA05 = DACO1
+
+	#define PIN_AS5047D_CS  (22)		//PA13 = 
+
+	#define PIN_GREEN_LED  	(19)			//PA06
+	#define PIN_RED_LED		(20)			//PA07
+
+	#define PIN_USB_PWR		(26)	//PA27 = 		//this pin is high when usb is connected
+	//PA08 ADC - 4
+	//
+	//#define __SAMD51G19A__		//Using G18A but close enough?
+	//51G19A is not close enough, need to use SAMD51G18A somehow.. 51J18A might be closer
+	#define Serial232		Serial1		//
+	#define SerialUSB		Serial		//Built in serial -> USB
+
+	//see variant.cpp, for mapping..
+	//Some notes: https://learn.adafruit.com/adafruit-metro-m4-express-featuring-atsamd51/adapting-sketches-to-m0
+
 #elif defined MKS_Servo42
 	#define A1333_ENCODER	1
 	//need more defs
@@ -291,45 +350,22 @@ enum class feedbackCtrl {
 	#error "Step/Dir UART not supported on Mechaduino yet"
 #endif
 
-#define PIN_SCL (21)			//I2C SCL (LCD)
-#define PIN_SDA (20)			//I2C SDA (LCD)
-#define PIN_USB_PWR (38)		//this pin is high when usb is connected
-
-#define PIN_AS5047D_CS  (16)	//
-//AS5047 MOSI		
-//AS5047 MISO		
-
-//FET
-#ifdef FET_STUFF
-#define PIN_FET_IN1		(5) //PA15 TC3/WO[1] TCC0/WO[5]1
-#define PIN_FET_IN2		(6) //PA20 TC7/W0[0] TCC0/WO[6]2
-#define PIN_FET_IN3		(7) //PA21 TC7/WO[1] TCC0/WO[7]3
-#define PIN_FET_IN4		(2) //PA14 TC3/W0[0] TCC0/WO[4] 0
-#define PIN_FET_VREF1	(4) //PA08
-#define PIN_FET_VREF2	(3) //PA09
-#define PIN_FET_ENABLE	(12) //
-
-//current sense pin from each H-bridge
-#define ISENSE_FET_A	 (17) //PA04
-#define ISENSE_FET_B	 (8)  //PA06
-
-//Comparators analog inputs
-#define COMP_FET_A		 (18) 	//PA05
-#define COMP_FET_B		 (9)	//PA07
-#endif
-
-#define PIN_GREEN_LED  		(8)		//PA06
-#define PIN_RED_LED		    (13)	//PA17
-
-#define PIN_A4954_IN3		(5)		//PA15
-#define PIN_A4954_IN4		(6)		//PA20
-#define PIN_A4954_IN2		(7)		//PA21
-#define PIN_A4954_IN1		(18)	//PA05
-
-#define PIN_A4954_VREF34	(4)		//PA08
-#define PIN_A4954_VREF12	(9)		//PA07
 
 //Here are some useful macros
+
+#ifdef _SAMD21_
+	#define WAIT_TC16_REGS_SYNC(x) while(x->COUNT16.STATUS.bit.SYNCBUSY);
+#else
+	//#define TCC0_GCLK
+	//#define TC5_GCLK	8
+	//#define TC3_GCLK	8
+	//#define ADC0_GCLK	?
+	//#define ADC1_GCLK	?
+	//#define DAC_GCLK	?
+	#define WAIT_TC16_REGS_SYNC(x) while(x->COUNT16.SYNCBUSY.reg);		//I think?
+	#include "samd51_gclk_defines.h"
+#endif
+
 #define DIVIDE_WITH_ROUND(x,y)  (((x)+(y)/2)/(y))
 
 #define GPIO_LOW(pin) {PORT->Group[g_APinDescription[(pin)].ulPort].OUTCLR.reg = (1ul << g_APinDescription[(pin)].ulPin);}
@@ -362,12 +398,12 @@ static void boardSetupPins(void)
 	pinMode(PIN_SW2, INPUT_PULLUP);
 #endif
 
-#if defined(NZ_STEPPER_REV1) || defined(NZ_STEPPER_REV2) || defined(NZ_STEPPER_5995)
+#if defined(NZ_STEPPER_REV1) || defined(NZ_STEPPER_REV2) || defined(NZ_STEPPER_REV3) || defined (NZ_STEPPER_NEMA23)
 	pinMode(PIN_STEP_INPUT, INPUT_PULLDOWN);
 	pinMode(PIN_DIR_INPUT, INPUT_PULLDOWN);
 	
 	pinPeripheral(PIN_TEMPERATURE, PIO_ANALOG);		//PIN_TEMPERATURE	//PA14 not used, moved to PB03
-	pinPeripheral(PIN_TEMPERATURE2, PIO_ANALOG);	//
+	//pinPeripheral(PIN_TEMPERATURE2, PIO_ANALOG);	//
 	pinPeripheral(PIN_VMOTOR, PIO_ANALOG);			//
 	
 	//usb lib is taking over rxled/txled
@@ -377,6 +413,7 @@ static void boardSetupPins(void)
 	pinMode(PIN_STEP_INPUT, INPUT);
 	pinMode(PIN_DIR_INPUT, INPUT);
 #endif
+
 
 #ifdef PIN_ENABLE
 	pinMode(PIN_ENABLE, INPUT_PULLUP); //default error pin as enable pin with pull up
@@ -396,11 +433,11 @@ static void boardSetupPins(void)
 #endif
 
 	//Setup SPI bus
-	pinMode(PIN_MOSI, OUTPUT);
-	digitalWrite(PIN_MOSI, LOW);
-	pinMode(PIN_SCK, OUTPUT);
-	digitalWrite(PIN_SCK, LOW);
-	pinMode(PIN_MISO, INPUT);
+	pinMode(PIN_SPI_MOSI, OUTPUT);
+	digitalWrite(PIN_SPI_MOSI, LOW);
+	pinMode(PIN_SPI_SCK, OUTPUT);
+	digitalWrite(PIN_SPI_SCK, LOW);
+	pinMode(PIN_SPI_MISO, INPUT);
 
 	//setup the A4954 pins
 	digitalWrite(PIN_A4954_IN3, LOW);

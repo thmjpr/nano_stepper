@@ -30,11 +30,12 @@
 #define LCD_WIDTH	128
 #define LCD_HEIGHT	64
 
-#define NAME_LEN 		15		//Max function name
+#define NAME_LEN 		13		//Max function name
 #define LCD_MAX_CHAR	11		//Max characters on LCD line
 
 typedef struct {
 	char str[NAME_LEN];
+	uint32_t val;
 } options_t;
 
 typedef struct {
@@ -74,10 +75,10 @@ class LCD
 		void begin(StepperCtrl *ptrStepperCtrl, ADC_Peripheral *ptrADC);	//sets up the LCD
 		void showSplash(void);
 		void process(void);							//determine what to display
-		void lcdShow(const char *line1, const char *line2,const char *line3);
+		void lcdShow(const char *line1, const char *line2, const char *line3);
 		void showCalibration(int current_step);		//
 		void showStepSize(float step);				//
-		void showInfo(void);						//Show various config info?
+		void showInfo(const int32_t motorcurrent, const int32_t microstep);						//Show various config info?
 };
 
 

@@ -20,53 +20,90 @@
 #pragma GCC push_options
 #pragma GCC optimize ("-Ofast")
 
-#define WAIT_TC16_REGS_SYNC(x) while(x->COUNT16.STATUS.bit.SYNCBUSY);
 #define n16_BIT_MAX		65536
-static_assert((100 < (F_CPU / NZS_CONTROL_LOOP_HZ)) & ((F_CPU / NZS_CONTROL_LOOP_HZ) < n16_BIT_MAX), "control loop frequency bad");
+//static_assert((100 < (F_CPU / NZS_CONTROL_LOOP_HZ)) & ((F_CPU / NZS_CONTROL_LOOP_HZ) < n16_BIT_MAX), "control loop frequency bad");
 
 volatile bool TC5_ISR_Enabled = false;
 extern ADC_Peripheral adc;
 
+volatile uint16_t encoder_avg_temp = 0;
+
 void setupTCInterrupts()
-{
+{	
+#ifdef _SAMD21_
+	Tc* TCx = TC5;
+	const auto TIMx_IRQn = TC5_IRQn;
 	// Enable GCLK for TC4 and TC5 (timer counter input clock)
 	GCLK->CLKCTRL.reg = (uint16_t)(GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN_GCLK0 | GCLK_CLKCTRL_ID(GCM_TC4_TC5));
-	while (GCLK->STATUS.bit.SYNCBUSY);
+	while (GCLK->STATUS.bit.SYNCBUSY) ;
+	
+#else	//SAMD51
+	Tc* TCx = TC2;
+	const auto TIMx_IRQn = TC2_IRQn;
+	MCLK->APBBMASK.bit.TC2_ = true; 		//
+		
+	//10
+	GCLK->GENCTRL[10].bit.DIV = 1;  				//Divider = 1
+	GCLK->GENCTRL[10].bit.IDC = true;  				//Improve duty cycle (?)
+	GCLK->GENCTRL[10].bit.GENEN = true;   			//Enable
+	GCLK->GENCTRL[10].bit.SRC = GCLK_GENCTRL_SRC_DFLL;    	//Select 48MHz source (?)
+	while(GCLK->SYNCBUSY.bit.GENCTRL10);  			//Wait for synchronization
+	
+	GCLK->PCHCTRL[GCLK_TC2].bit.CHEN = true;    						//Enable peripheral channel
+	GCLK->PCHCTRL[GCLK_TC2].bit.GEN = GCLK_PCHCTRL_GEN_GCLK10_Val;    	//Set GCLK channel to x
 
-	TC5->COUNT16.CTRLA.bit.ENABLE = 0;									// Disable TCx
+#endif // _SAMD21_
+	
+	TCx->COUNT16.CTRLA.bit.ENABLE = 0;									// Disable TCx
 	//TC5->COUNT16.CTRLA.bit.SWRST = 1; 									// Reset Timer
-	TC5->COUNT16.CTRLA.bit.MODE = TC_CTRLA_MODE_COUNT16_Val;			// Set Timer counter Mode to 16 bits
-	TC5->COUNT16.CTRLA.bit.WAVEGEN = TC_CTRLA_WAVEGEN_MFRQ_Val;			// Set TC as normal Normal Frq
-	TC5->COUNT16.CTRLA.bit.PRESCALER = TC_CTRLA_PRESCALER_DIV1_Val;		// Set prescaler - none
-	TC5->COUNT16.CC[0].reg = (F_CPU / NZS_CONTROL_LOOP_HZ);				//Set capture channel interrupt, 48MHz/6000Hz 0.2ms
-	WAIT_TC16_REGS_SYNC(TC5)
+	TCx->COUNT16.CTRLA.bit.MODE = TC_CTRLA_MODE_COUNT16_Val;			// Set Timer counter Mode to 16 bits
+
+#ifdef _SAMD21_
+	TCx->COUNT16.CTRLA.bit.WAVEGEN = TC_CTRLA_WAVEGEN_MFRQ_Val; 			// Set TC as normal Normal Frq
+#else	//SAMD51
+	TCx->COUNT16.WAVE.bit.WAVEGEN = TC_WAVE_WAVEGEN_MFRQ_Val;
+#endif
+	TCx->COUNT16.CTRLA.bit.PRESCALER = TC_CTRLA_PRESCALER_DIV1_Val;		// Set prescaler - none
+	TCx->COUNT16.CC[0].reg = (F_CPU / NZS_CONTROL_LOOP_HZ);				//Set compare match interrupt time, 48MHz/6000Hz 0.2ms
+	WAIT_TC16_REGS_SYNC(TCx)
 		
 	//TC5->COUNT16.DBGCTRL.bit.DBGRUN = 0;		//Run timer when debug stopped yes (1) or no (0)
-	TC5->COUNT16.INTENSET.reg = 0;              // disable all interrupts
+	TCx->COUNT16.INTENSET.reg = 0;              // disable all interrupts
 	//TC5->COUNT16.INTENSET.bit.OVF = 1;          // enable overflow interrupt
-	TC5->COUNT16.INTENSET.bit.MC0 = 1;         // enable compare match to CC0
-	WAIT_TC16_REGS_SYNC(TC5)
+	TCx->COUNT16.INTENSET.bit.MC0 = 1;         // enable compare match to CC0
+	WAIT_TC16_REGS_SYNC(TCx)
 		
 	//Interrupt
-	NVIC_ClearPendingIRQ(TC5_IRQn);				//Clear any pending
-	NVIC_SetPriority(TC5_IRQn, 2);				//Set priority of interrupt to lowest
-	NVIC_EnableIRQ(TC5_IRQn);					//Enable InterruptVector
+	NVIC_ClearPendingIRQ(TIMx_IRQn);			//Clear any pending
+	NVIC_SetPriority(TIMx_IRQn, 2); 			//Set priority of interrupt to lowest
+	NVIC_EnableIRQ(TIMx_IRQn); 					//Enable InterruptVector
 	
-	TC5->COUNT16.CTRLA.bit.ENABLE = 1; 			//Enable timer TCx
+	TCx->COUNT16.CTRLA.bit.ENABLE = 1; 			//Enable timer TCx
 }
 
+//need cleanup...
 static void enableTCInterrupts()
 {
+#ifdef _SAMD21_
 	TC5_ISR_Enabled = true;
-	NVIC_EnableIRQ(TC5_IRQn);
-	TC5->COUNT16.INTENSET.bit.MC0 = 1;		//set compare match
+	NVIC_EnableIRQ(TC5_IRQn);	//TC5?
+	TC5->COUNT16.INTENSET.bit.MC0 = 1; 		//set compare match	
+#else	//SAMD51
+	TC5_ISR_Enabled = true;
+	NVIC_EnableIRQ(TC2_IRQn);
+	TC2->COUNT16.INTENSET.bit.MC0 = 1; 		//set compare match
+#endif
 }
 
 static void disableTCInterrupts()
 {
 	TC5_ISR_Enabled = false;
 	//NVIC_DisableIRQ(TC5_IRQn);
+#ifdef _SAMD21_
 	TC5->COUNT16.INTENCLR.bit.MC0 = 1;		//clear compare match
+#else	//SAMD51	
+	TC2->COUNT16.INTENCLR.bit.MC0 = 1;			//clear compare match
+#endif
 }
 
 static bool enterCriticalSection()
@@ -108,15 +145,9 @@ void StepperCtrl::updateParamsFromNVM(void)
 	else
 	{
 		ERROR("This should never happen but just in case");
-		systemParams.microsteps = 256;
-		systemParams.controllerMode = feedbackCtrl::SIMPLE;
-		systemParams.dirPinRotation = RotationDir::CW; //default to clockwise rotation when dir is high
-		systemParams.errorLimit = (int32_t)ANGLE_FROM_DEGREES(1.8);
-		systemParams.errorPinMode = ErrorPinMode::ACTIVE_LOW; //active low on error (open collector on)
-		systemParams.enablePinMode = EnablePinMode::ALWAYS_ON;
-		systemParams.errorLogic = false;
-		systemParams.homeAngleDelay = ANGLE_FROM_DEGREES(10);
-		systemParams.homePin = -1; //no homing pin configured
+		while (1)
+		{			
+		}
 	}
 
 	//default the error pin to input, if it is an error pin the
@@ -153,19 +184,6 @@ void  StepperCtrl::motorReset(void)
 	// to sync motor phasing, leaving the motor at "phase 0"
 	bool state = enterCriticalSection();
 
-	//	stepperDriver.move(0,motorParams.currentMa);
-	 //	stepperDriver.move(0,motorParams.currentMa);
-	 //	delay(100);
-	 //	stepperDriver.move(A4954_NUM_MICROSTEPS,motorParams.currentMa);
-	 //	delay(100);
-	 //	stepperDriver.move(A4954_NUM_MICROSTEPS*2,motorParams.currentMa);
-	 //	delay(100);
-	 //	stepperDriver.move(A4954_NUM_MICROSTEPS*3,motorParams.currentMa);
-	 //	delay(100);
-	 //	stepperDriver.move(A4954_NUM_MICROSTEPS*2,motorParams.currentMa);
-	 //	delay(100);
-	 //	stepperDriver.move(A4954_NUM_MICROSTEPS,motorParams.currentMa);
-	 //	delay(100);
 	stepperDriver.move(0, motorParams.currentMa);
 	delay(1000);
 
@@ -473,7 +491,7 @@ bool StepperCtrl::calibrateEncoder(LCD * lcd_d)
 		if (lcd_d != nullptr)
 			lcd_d->showCalibration(j + 1);
 
-		delay(20);//200
+		delay(5);//200
 		mean = sampleMeanEncoder(200);
 
 		LOG("Previous cal distance %d, %d, mean %d, cal %d", j, cal - Angle((uint16_t)mean), mean, (uint16_t)cal);
@@ -491,7 +509,7 @@ bool StepperCtrl::calibrateEncoder(LCD * lcd_d)
 
 		if (400 == motorParams.fullStepsPerRotation)
 		{
-			delay(10);//100
+			delay(100);
 			updateStep(0, 1);
 			// move one half step at a time, a full step move could cause a move backwards depending on how current ramps down
 			steps += A4954_NUM_MICROSTEPS / 2;
@@ -550,27 +568,27 @@ stepCtrlError StepperCtrl::begin(LCD * lcd_d)
 	startUpEncoder = (uint16_t)getEncoderAngle();
 	WARNING("encoder angle: %d", startUpEncoder);
 
-	//StepperCtrl::encoderDiagnostics(NULL);
+	StepperCtrl::encoderDiagnostics(NULL);
 
 	LOG("start stepper driver");
 	stepperDriver.begin();
-	
+		
 	//test motor driver
 	while (0)
 	{
-			volatile int32_t angles;
-			RED_LED(false);		
-			stepperDriver.move(128, 500);
-			delay(200);
-			RED_LED(true);		
-			stepperDriver.move(256, 500);
-			delay(200);	
+		volatile int32_t angles;
+		RED_LED(false);		
+		stepperDriver.move(128, 500);
+		delay(200);
+		RED_LED(true);		
+		stepperDriver.move(256, 500);
+		delay(200);	
 		
-			angles = StepperCtrl::sampleAngle();
+		angles = StepperCtrl::sampleAngle();
 	}	
 	
 
-#if defined(NEMA17_SMART_STEPPER_3_21_2017) || defined(NZ_STEPPER_REV1) || defined(NZ_STEPPER_REV2)
+#if defined(NEMA17_SMART_STEPPER_3_21_2017) || defined(NZ_STEPPER_REV1) || defined(NZ_STEPPER_REV2)  || defined(NZ_STEPPER_REV3)
 	if (NVM->motorParams.parametersValid)
 	{
 		//lets read the motor voltage
@@ -635,9 +653,9 @@ stepCtrlError StepperCtrl::begin(LCD * lcd_d)
 		}
 
 		if (x > 0)	//0.1
-		{
-			motorParams.motorWiring = true;
-		}
+			{
+				motorParams.motorWiring = true;
+			}
 		else
 		{
 			motorParams.motorWiring = false;
@@ -653,7 +671,7 @@ stepCtrlError StepperCtrl::begin(LCD * lcd_d)
 
 		memcpy((void *)&params, (void *)&motorParams, sizeof(motorParams));
 		nvmWriteMotorParms(params);
-}
+	}
 
 	LOG("Motor params are now good");
 	LOG("fullSteps %d", motorParams.fullStepsPerRotation);
@@ -673,24 +691,78 @@ stepCtrlError StepperCtrl::begin(LCD * lcd_d)
 	enableFeedback = true;
 	setupTCInterrupts();
 	enableTCInterrupts();
+	
 	return stepCtrlError::No_ERROR;
 }
 
 Angle StepperCtrl::sampleAngle(void)
 {
-	uint16_t angle;
-	int32_t x, y;
+	/*
+	volatile uint16_t angle;
+	uint16_t x, y;
 
 #ifdef NZS_AS5047_PIPELINE
 	//read encoder twice such that we get the latest sample as the pipeline is always once sample behind
-	y = encoder.readEncoderAnglePipeLineRead(); //convert the 14 bit encoder value to a 16 bit number
+	y = encoder.readEncoderAnglePipeLineRead();				//
 	x = encoder.readEncoderAnglePipeLineRead();
 
-	angle = ((uint32_t)(x) * 4); //convert the 14 bit encoder value to a 16 bit number
+	for(int i=0 ; i<32 ; i++)
+		Serial.printf("%d ", encoder.readEncoderAnglePipeLineRead());
+	
+	Serial.print(";");
+	
+	angle = ((uint32_t)(x) * 4);  //convert the 14 bit encoder value to a 16 bit number
 #else
 	angle = ((uint32_t)encoder.readEncoderAngle()) << 2; //convert the 14 bit encoder value to a 16 bit number
 #endif
-	return Angle(angle);
+	return Angle(angle);*/
+	
+	return sampleMeanPipeline();			
+}
+
+
+#define ENCODER_MAX 16384		//14-bit encoder
+
+//Encoder seems to be noisy sometimes?
+Angle StepperCtrl::sampleMeanPipeline()
+{
+		const int32_t numSamples = 32;
+		volatile int32_t i = 0, last, x = 0;
+		volatile int32_t mean = 0;
+	
+		volatile int32_t tmp[numSamples];
+
+		encoder.readEncoderAnglePipeLineRead();
+		x = encoder.readEncoderAnglePipeLineRead();
+		mean += x;
+	
+		for (; i < (numSamples-1); i++)
+		{		
+			tmp[i] = x;
+			last = x;
+			x = encoder.readEncoderAnglePipeLineRead();
+			
+			if(abs(last - x) > ENCODER_MAX / 2)
+			{
+				if (last > x)
+				{
+					x += ENCODER_MAX;
+				}
+				else
+				{
+					x -= ENCODER_MAX;
+				}
+			}
+
+			mean += x;
+		}
+
+	mean = (mean * 4) / numSamples;
+	
+	if (mean < 0)
+		mean += ENCODER_MAX * 4;
+	
+	return Angle(mean);
 }
 
 //when sampling the mean of encoder if we are on roll over
@@ -732,7 +804,6 @@ Angle StepperCtrl::sampleMeanEncoder(int32_t numSamples)
 				x = x - 65536;
 			}
 		}
-
 
 		if (x > max)
 		{
@@ -819,7 +890,7 @@ void StepperCtrl::move(int dir, uint16_t steps)
 	{
 		n = systemParams.microsteps;
 		ret = ((int64_t)numSteps * A4954_NUM_MICROSTEPS + (n / 2)) / n;
-		n = A4954_NUM_MICROSTEPS*motorParams.fullStepsPerRotation;
+		n = A4954_NUM_MICROSTEPS * motorParams.fullStepsPerRotation;
 		while (ret > n)
 		{
 			ret -= n;
@@ -871,6 +942,12 @@ void StepperCtrl::moveToAngle(int32_t a, uint32_t ma)
 
 	//LOG("move %d %d",a,ma);
 	stepperDriver.move(a, ma);
+}
+
+//
+void StepperCtrl::holdAngle(uint32_t ma)
+{
+	stepperDriver.hold(ma);
 }
 
 //
@@ -948,7 +1025,7 @@ void StepperCtrl::PrintData(void)
 {
 	char s[128];
 	bool state = enterCriticalSection();
-	sprintf(s, "%u,%u,%u", (uint32_t)numSteps, (uint32_t)getDesiredAngle(), (uint32_t)getCurrentAngle());
+	sprintf(s, "%u,%u,%u", numSteps, getDesiredAngle(), getCurrentAngle());
 	SerialUSB.println(s);
 	exitCriticalSection(state);
 }
@@ -1056,7 +1133,7 @@ bool StepperCtrl::pidFeedback(int64_t desiredLoc, int64_t currentLoc, Control_t 
 		}
 
 		//Over the long term we do not want error to be much more than our threshold
-		constrain_pm(&Iterm, (ma*CTRL_PID_SCALING));
+		constrain_pm(&Iterm, (ma * CTRL_PID_SCALING));
 
 		u = ((pPID.Kp * error) + Iterm - (pPID.Kd *(lastError - error)));
 		U = abs(u) / CTRL_PID_SCALING;
@@ -1163,6 +1240,8 @@ bool StepperCtrl::determineError(int64_t currentLoc, int64_t error)
 	lastVelocity = cur_velocity;
 	lastError = error;
 	lastLocation = currentLoc;
+	
+	return false;
 }
 
 // This was written to do the PID loop not modeling a DC servo
@@ -1351,7 +1430,6 @@ bool StepperCtrl::simpleFeedback(int64_t desiredLoc, int64_t currentLoc, Control
 	return 0;
 }
 
-
 //
 void StepperCtrl::enable(bool enable)
 {
@@ -1376,6 +1454,23 @@ void StepperCtrl::enable(bool enable)
 	enableFeedback = feedback;
 	if (state) enableTCInterrupts();
 }
+
+
+//
+void StepperCtrl::sleep(bool sleep)
+{
+	if (sleep)
+	{
+		motorParams.currentHoldMa = 0;
+	}
+	
+	else
+	{
+		motorParams.currentHoldMa = NVM->motorParams.currentHoldMa;
+	}
+	
+}
+
 
 //returns -1 if no data, else returns number of data points remaining.
 int32_t StepperCtrl::getLocation(Location_t *ptrLoc)
@@ -1434,27 +1529,42 @@ void StepperCtrl::updateLocTable(int64_t desiredLoc, int64_t currentLoc, Control
 
 bool StepperCtrl::processFeedback(void)
 {
-	bool ret = false;
-	int32_t us, j;
 	Control_t ctrl;
-	int64_t desiredLoc;
-	int64_t currentLoc;
-	int32_t steps;
+	int64_t desiredLoc, currentLoc, x;
 	static int64_t mean = 0;
-
+	int32_t us, j, steps;
+	bool ret = false;
+	
 	us = micros();
 
 #ifdef USE_TC_STEP
-	static int64_t lastSteps;
-	int64_t x;
+	static int64_t lastSteps = 0;
 	x = getSteps() - lastSteps;
+
+	//Backlash compensation of step input
+	if(USE_BACKLASH && (NVM->SystemParams.backlashDegrees > 0))
+	{
+		static bool dir_last = true; 		//can change to CW/CCW
+		if((x > 0) && !dir_last)			//if direction to move has changed
+		{
+			dir_last = true;
+			updateStep(1, 50);
+		}
+		if ((x < 0) && dir_last) 
+		{
+			updateStep(0, 50);
+			dir_last = false;
+		}
+	}
+	
 	updateSteps(x);
 	lastSteps += x;
 #endif
 
 	desiredLoc = getDesiredLocation();
 	currentLoc = getCurrentLocation();
-	mean = (31 * mean + currentLoc + 16) / 32;		//moving average?
+	//mean = (31 * mean + currentLoc + 16) / 32;		//moving average?
+	mean = currentLoc;
 
 	//**FF */Should have some configurable anti-hunt or similar.
 	
@@ -1470,35 +1580,35 @@ bool StepperCtrl::processFeedback(void)
 	switch (systemParams.controllerMode)
 	{
 	case feedbackCtrl::POS_PID:
-	{
-		ret = pidFeedback(desiredLoc, currentLoc, &ctrl);
-		break;
-	}
+		{
+			ret = pidFeedback(desiredLoc, currentLoc, &ctrl);
+			break;
+		}
 	default:
 	case feedbackCtrl::SIMPLE:
-	{
-		ret = simpleFeedback(desiredLoc, currentLoc, &ctrl);
-		break;
-	}
+		{
+			ret = simpleFeedback(desiredLoc, currentLoc, &ctrl);
+			break;
+		}
 	case feedbackCtrl::POS_VELOCITY_PID:
-	{
-		ret = vpidFeedback(desiredLoc, currentLoc, &ctrl);
-		break;
-	}
-	//TODO if disable feedback and someone switches mode
-	// they will have to turn feedback back on.
-	case feedbackCtrl::OFF:
-	{
-		enableFeedback = false;
-		break;
-	}
+		{
+			ret = vpidFeedback(desiredLoc, currentLoc, &ctrl);
+			break;
+		}
+		//TODO if disable feedback and someone switches mode
+		// they will have to turn feedback back on.
+		case feedbackCtrl::OFF:
+		{
+			enableFeedback = false;
+			break;
+		}
 	case feedbackCtrl::OPEN:
-	{
-		enableFeedback = false;
-		break;
+		{
+			enableFeedback = false;
+			break;
+		}
 	}
-}
-	ticks++;
+	//ticks++;
 	updateLocTable(desiredLoc, currentLoc, &ctrl);
 	loopTimeus = micros() - us;
 	return ret;
@@ -1697,8 +1807,16 @@ void StepperCtrl::PID_Autotune(void)
 	systemParams.microsteps = microSteps;
 	enableFeedback = feedback;
 	if (state) enableTCInterrupts();
-
 }
 
+
+//
+void StepperCtrl::setBacklashSteps(uint32_t backlash)
+{
+	if (backlash < 9999)
+	{
+		backlashSteps = backlash;	
+	}
+}
 
 #pragma GCC pop_options
